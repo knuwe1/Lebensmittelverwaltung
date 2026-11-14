@@ -32,19 +32,47 @@ Die API-Dokumentation (OpenAPI) ist unter `https://<adresse>/api/v1/docs` erreic
 
 ## HTTPS
 
-Kamera und PWA-Installation funktionieren auf Android nur über HTTPS. Drei Varianten:
+Kamera und PWA-Installation funktionieren auf Android nur über HTTPS. Die Zertifikatsquelle
+wird über `LMV_TLS_MODE` gewählt.
 
-1. **Eigene Domain mit öffentlichem DNS** – `LMV_SITE_ADDRESS=vorrat.example.de`,
-   `LMV_TLS=<E-Mail>`. Caddy holt automatisch ein Let's-Encrypt-Zertifikat
-   (Ports 80/443 müssen erreichbar sein).
-2. **Tailscale / VPN** (empfohlen für Zugriff von unterwegs, DEC-009) – Zugriff nur über
-   das private Netz; Zertifikat z. B. über `tailscale cert`.
-3. **Nur Heimnetz** – `LMV_TLS=internal`. Caddy erzeugt eine eigene Zertifizierungsstelle.
-   Deren Stammzertifikat muss einmalig auf jedem Gerät installiert werden:
+### Empfohlen: Tailscale (`LMV_TLS_MODE=tailscale`, DEC-009)
+
+Die Anwendung ist dann nur im eigenen Tailnet erreichbar – zu Hause und unterwegs, ohne
+Portfreigabe im Router. Das Zertifikat ist ein reguläres Let's-Encrypt-Zertifikat für den
+`*.ts.net`-Namen; auf den Handys muss nichts installiert werden.
+
+1. Tailscale auf dem Server installieren und anmelden:
    ```bash
-   docker compose cp web:/data/caddy/pki/authorities/local/root.crt ./lmv-root.crt
+   curl -fsSL https://tailscale.com/install.sh | sh
+   sudo tailscale up
    ```
-   Android: *Einstellungen → Sicherheit → Verschlüsselung → Zertifikat installieren → CA-Zertifikat*.
+2. In der Tailscale-Admin-Konsole unter *DNS* **MagicDNS** und **HTTPS Certificates** aktivieren.
+3. Den Namen des Servers ermitteln: `tailscale status --self --json | grep DNSName`
+   (z. B. `heimserver.tail1234.ts.net`).
+4. In der `.env`:
+   ```ini
+   LMV_SITE_ADDRESS=heimserver.tail1234.ts.net
+   LMV_TLS_MODE=tailscale
+   COMPOSE_FILE=docker-compose.yml:docker-compose.tailscale.yml
+   LMV_BIND_ADDRESS=100.x.y.z    # Ausgabe von: tailscale ip -4  (optional, sperrt das Heimnetz aus)
+   ```
+5. `docker compose up -d` – danach ist die App unter `https://heimserver.tail1234.ts.net`
+   erreichbar.
+6. Auf jedem Android-Gerät die Tailscale-App installieren und im selben Tailnet anmelden.
+   Anschließend die Adresse in Chrome öffnen und über *Zum Startbildschirm hinzufügen*
+   als App installieren.
+
+### Alternativen
+
+- **Nur Heimnetz** (`LMV_TLS_MODE=internal`): Caddy erzeugt eine eigene Zertifizierungsstelle.
+  Deren Stammzertifikat muss auf jedem Gerät installiert werden:
+  ```bash
+  docker compose cp web:/data/caddy/pki/authorities/local/root.crt ./lmv-root.crt
+  ```
+  Android: *Einstellungen → Sicherheit → Verschlüsselung → Zertifikat installieren → CA-Zertifikat*.
+- **Öffentliche Domain** (`LMV_TLS_MODE=acme`, `LMV_ACME_EMAIL=…`): Let's Encrypt;
+  Ports 80/443 müssen aus dem Internet erreichbar sein. Für eine Haushaltsanwendung
+  nur mit zusätzlicher Absicherung zu empfehlen.
 
 ## Datensicherung
 

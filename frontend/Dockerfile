@@ -8,4 +8,5 @@ RUN npm run build
 
 FROM caddy:2-alpine
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
+COPY deploy/caddy-tls /etc/caddy/tls
 COPY --from=build /app/dist /srv
