@@ -2,7 +2,9 @@
 
 `mobile_smoke.py` bedient die Anwendung in einem echten Chromium auf einem simulierten
 Android-Gerät (Pixel 7) und prüft Einlagern, Entnehmen (FEFO), Entsorgen, Umlagern,
-Historie mit Storno sowie den Schutz vor Doppelbuchungen (Spez. 15.4, 15.5).
+Historie mit Storno, Restmenge per Waage, den **Barcode-Scan mit der Kamera** (Chromium
+spielt dafür ein erzeugtes Video mit einem EAN-13-Barcode ab, `make_barcode_video.py`)
+sowie den Schutz vor Doppelbuchungen (Spez. 15.4, 15.5).
 
 Er ersetzt nicht den Test auf einem realen Gerät (Kamera, Bedienung mit einer Hand),
 findet aber Fehler, die Typecheck und API-Tests nicht sehen.

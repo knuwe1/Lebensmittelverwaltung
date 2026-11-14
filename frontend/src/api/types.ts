@@ -174,3 +174,30 @@ export interface WeighingPreview {
   consumption: number;
   remaining_total: number;
 }
+
+export interface HouseholdSettings {
+  external_product_data: boolean;
+  expiry_warning_days: number;
+  stock_warning_factor: number;
+}
+
+export interface ProductSuggestion {
+  source: string;
+  source_url: string;
+  license: string;
+  barcode: string;
+  name: string | null;
+  brand: string | null;
+  base_unit: BaseUnit;
+  package_quantity: number | string | null;
+  package_unit: PackageUnit | null;
+  category_id: string | null;
+  image_url: string | null;
+}
+
+/** Vorbelegung für die Neuanlage eines Produkts (Suche, Scan oder externe Quelle). */
+export interface ProductPrefill {
+  name?: string;
+  barcode?: string;
+  suggestion?: ProductSuggestion;
+}

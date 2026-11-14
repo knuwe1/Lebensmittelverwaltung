@@ -76,6 +76,8 @@ class ProductCreate(BaseModel):
     notes: str | None = Field(default=None, max_length=5000)
     image_source: str | None = Field(default=None, max_length=200)
     weigh_remaining: bool = False
+    # Bild aus einer externen Produktdatenquelle übernehmen (nur zulässige Quellen)
+    external_image_url: str | None = Field(default=None, max_length=1000)
     variants: list[VariantIn] = Field(default_factory=list, max_length=50)
 
     @model_validator(mode="after")

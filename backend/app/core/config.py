@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     media_dir: str = "/data/media"
     max_upload_bytes: int = 8 * 1024 * 1024
 
+    # Externe Produktdaten (aktiviert wird pro Haushalt in den Einstellungen)
+    off_base_url: str = "https://world.openfoodfacts.org"
+
     log_level: str = "INFO"
 
 

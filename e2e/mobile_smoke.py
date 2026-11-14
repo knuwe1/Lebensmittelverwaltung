@@ -12,6 +12,9 @@ import uuid
 
 from playwright.sync_api import expect, sync_playwright
 
+sys.path.insert(0, __file__.rsplit("/", 1)[0])
+from make_barcode_video import main as make_video  # noqa: E402
+
 BASE = sys.argv[1]
 OUT = sys.argv[2]
 errors: list[str] = []
@@ -22,8 +25,17 @@ def step(name):
 
 
 def main(pw):
-    browser = pw.chromium.launch()
+    video = f"{OUT}/barcode.y4m"
+    make_video("4006381333931", video)
+    browser = pw.chromium.launch(
+        args=[
+            "--use-fake-ui-for-media-stream",
+            "--use-fake-device-for-media-stream",
+            f"--use-file-for-fake-video-capture={video}",
+        ]
+    )
     ctx = browser.new_context(**pw.devices["Pixel 7"], ignore_https_errors=True, locale="de-DE")
+    ctx.grant_permissions(["camera"])
     page = ctx.new_page()
     page.on("pageerror", lambda e: errors.append(f"pageerror: {e}"))
     page.on(
@@ -72,6 +84,15 @@ def main(pw):
     page.get_by_role("button", name=re.compile(r"3 l einlagern")).click()
     expect(page.get_by_text(re.compile(r"eingelagert\. Neuer Bestand: 3 l"))).to_be_visible()
     step("Einlagern 3 l mit zwei MHD")
+
+    # Barcode per Kamera scannen (Fake-Kamera zeigt EAN 4006381333931)
+    page.get_by_role("button", name="Barcode scannen").click()
+    expect(page.get_by_label("Kamerabild")).to_be_visible()
+    # Buchungsmaske öffnet sich erst nach erkanntem Barcode
+    expect(page.get_by_label("Anzahl Packungen").first).to_be_visible(timeout=20000)
+    expect(page.get_by_text("Bestand: 3 l")).to_be_visible()
+    page.get_by_role("button", name="Anderes Produkt wählen").click()
+    step("Barcode-Scan per Kamera erkennt Testmilch")
 
     # Entnehmen: automatischer FEFO-Vorschlag
     page.goto(f"{BASE}/entnehmen")
