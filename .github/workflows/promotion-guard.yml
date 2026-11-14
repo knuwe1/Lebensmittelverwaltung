@@ -1,0 +1,41 @@
+name: Promotion Guard
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+
+permissions: {}
+
+jobs:
+  promotion-path:
+    name: promotion-path
+    runs-on: ubuntu-latest
+    steps:
+      - name: Quell- und Zielbranch prüfen
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          echo "PR: $HEAD → $BASE (gleiches Repo: $SAME_REPO)"
+          case "$BASE" in
+            test)
+              if [ "$HEAD" != "dev" ] || [ "$SAME_REPO" != "true" ]; then
+                echo "::error::Nach 'test' darf nur aus 'dev' gemergt werden (gefunden: '$HEAD')."
+                exit 1
+              fi
+              ;;
+            main)
+              if [ "$HEAD" != "test" ] || [ "$SAME_REPO" != "true" ]; then
+                echo "::error::Nach 'main' darf nur aus 'test' gemergt werden (gefunden: '$HEAD')."
+                exit 1
+              fi
+              ;;
+            dev)
+              if [ "$HEAD" = "test" ] || [ "$HEAD" = "main" ]; then
+                echo "::error::Rück-Merges nach 'dev' sind nicht vorgesehen. Siehe docs/ENTWICKLUNGSPROZESS.md."
+                exit 1
+              fi
+              ;;
+          esac
+          echo "Promotion-Pfad ist zulässig."
