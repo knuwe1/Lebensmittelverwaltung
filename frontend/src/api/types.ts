@@ -27,6 +27,7 @@ export interface Variant {
   package_quantity: number;
   package_unit: PackageUnit;
   base_quantity: number;
+  tare_weight: number | null;
   is_default: boolean;
   active: boolean;
 }
@@ -44,6 +45,7 @@ export interface Product {
   default_shelf_life_days: number | null;
   expiry_warning_days: number | null;
   notes: string | null;
+  weigh_remaining: boolean;
   active: boolean;
   has_image: boolean;
   image_source: string | null;
@@ -161,4 +163,14 @@ export interface Movement {
   created_by_name: string;
   reverses_movement_id: string | null;
   reversed: boolean;
+}
+
+export interface WeighingPreview {
+  measured: number;
+  tare: number;
+  net: number;
+  full_packages: number;
+  open_before: number;
+  consumption: number;
+  remaining_total: number;
 }

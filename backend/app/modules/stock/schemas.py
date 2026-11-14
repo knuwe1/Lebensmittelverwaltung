@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.core.units import BaseUnit, PositiveQuantity, Quantity
+from app.core.units import BaseUnit, NonNegativeQuantity, PositiveQuantity, Quantity
 from app.modules.catalog.schemas import ProductOut
 from app.modules.stock.models import ExpiryType, StockStatus
 
@@ -187,3 +187,22 @@ class MovementOut(BaseModel):
 class MovementPage(BaseModel):
     items: list[MovementOut]
     total: int
+
+
+class WeighingCreate(BaseModel):
+    """Restmenge per Waage: abgelesenes Gewicht der angebrochenen Packung (DEC-029)."""
+
+    stock_item_id: uuid.UUID
+    measured_weight: NonNegativeQuantity
+    expected_version: int | None = None
+    comment: str | None = Field(default=None, max_length=2000)
+
+
+class WeighingPreview(BaseModel):
+    measured: Quantity
+    tare: Quantity
+    net: Quantity
+    full_packages: int
+    open_before: Quantity
+    consumption: Quantity
+    remaining_total: Quantity

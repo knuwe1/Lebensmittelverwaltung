@@ -7,6 +7,7 @@ import {
   Select,
   SimpleGrid,
   Stack,
+  Switch,
   Text,
   TextInput,
   Textarea,
@@ -48,6 +49,8 @@ export function ProductForm({ product, initialBarcode, initialName, onSaved, onC
   const [minStock, setMinStock] = useState<string | number>(product?.minimum_stock ?? '');
   const [targetStock, setTargetStock] = useState<string | number>(product?.target_stock ?? '');
   const [notes, setNotes] = useState(product?.notes ?? '');
+  const [weigh, setWeigh] = useState(product?.weigh_remaining ?? false);
+  const [tare, setTare] = useState<string | number>('');
   // Erste Verpackungsvariante bei Neuanlage
   const [pkgQty, setPkgQty] = useState<string | number>('');
   const [pkgUnit, setPkgUnit] = useState<string>('piece');
@@ -65,6 +68,7 @@ export function ProductForm({ product, initialBarcode, initialName, onSaved, onC
         default_shelf_life_days: num(shelfLife),
         expiry_warning_days: num(warnDays),
         notes: notes.trim() || null,
+        weigh_remaining: baseUnit === 'g' && weigh,
         ...(isAdmin ? { minimum_stock: num(minStock), target_stock: num(targetStock) } : {}),
       };
       if (isNew) {
@@ -75,6 +79,7 @@ export function ProductForm({ product, initialBarcode, initialName, onSaved, onC
                   package_quantity: pkgQty === '' ? 1 : Number(pkgQty),
                   package_unit: pkgQty === '' ? 'piece' : pkgUnit,
                   barcode: barcode.trim() || null,
+                  tare_weight: baseUnit === 'g' && tare !== '' ? Number(tare) : null,
                   is_default: true,
                 },
               ]
@@ -121,6 +126,14 @@ export function ProductForm({ product, initialBarcode, initialName, onSaved, onC
           data={(['piece', 'g', 'ml'] as const).map((u) => ({ value: u, label: UNIT_LABELS[u] }))}
         />
       </div>
+      {baseUnit === 'g' && (
+        <Switch
+          label="Restmenge per Waage erfassen"
+          description="Beim Entnehmen die angebrochene Packung wiegen; die Differenz wird als Verbrauch gebucht."
+          checked={weigh}
+          onChange={(e) => setWeigh(e.currentTarget.checked)}
+        />
+      )}
 
       {isNew && (
         <SimpleGrid cols={{ base: 2, sm: 3 }}>
@@ -148,6 +161,16 @@ export function ProductForm({ product, initialBarcode, initialName, onSaved, onC
             onChange={(e) => setBarcode(e.currentTarget.value)}
             error={errors['variants.0.barcode']}
           />
+          {baseUnit === 'g' && weigh && (
+            <NumberInput
+              label="Leergewicht Verpackung (g)"
+              placeholder="optional"
+              decimalSeparator=","
+              min={0}
+              value={tare}
+              onChange={setTare}
+            />
+          )}
         </SimpleGrid>
       )}
 

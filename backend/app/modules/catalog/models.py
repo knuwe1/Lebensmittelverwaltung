@@ -88,6 +88,10 @@ class Product(UUIDPk, Timestamps, Base):
     image_path: Mapped[str | None] = mapped_column(String(255))
     image_source: Mapped[str | None] = mapped_column(String(200))
     notes: Mapped[str | None] = mapped_column(Text)
+    # Restmenge per Waage erfassen (DEC-029); nur bei Basiseinheit Gramm
+    weigh_remaining: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     category: Mapped[ProductCategory] = relationship(lazy="joined")
@@ -105,6 +109,7 @@ class ProductVariant(UUIDPk, Timestamps, Base):
     __table_args__ = (
         CheckConstraint("package_quantity > 0", name="package_quantity_positive"),
         CheckConstraint("base_quantity > 0", name="base_quantity_positive"),
+        CheckConstraint("tare_weight IS NULL OR tare_weight >= 0", name="tare_non_negative"),
         # Ein Barcode gehört innerhalb eines Haushalts zu genau einer Variante (FR-PRD-002).
         Index(
             "uq_product_variants_barcode",
@@ -129,6 +134,8 @@ class ProductVariant(UUIDPk, Timestamps, Base):
     )
     # Menge in der Basiseinheit des Produkts, z. B. 1 kg → 1000
     base_quantity: Mapped[Decimal] = mapped_column(QTY, nullable=False)
+    # Leergewicht der Verpackung in Gramm, wird beim Wiegen abgezogen (DEC-029)
+    tare_weight: Mapped[Decimal | None] = mapped_column(QTY)
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 

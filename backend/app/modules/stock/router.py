@@ -22,6 +22,8 @@ from app.modules.stock.schemas import (
     ReversalCreate,
     StockPage,
     TransferCreate,
+    WeighingCreate,
+    WeighingPreview,
 )
 
 router = APIRouter(prefix="/stock", tags=["Bestand"])
@@ -203,3 +205,27 @@ def recent_products(
 ):
     """Zuletzt vom Benutzer gebuchte Produkte mit Bestand (Schnellentnahme)."""
     return movements.recent_products(db, user, movement_type, limit)
+
+
+@router.get("/weighing-preview", response_model=WeighingPreview)
+def weighing_preview(
+    db: DbSession, user: CurrentUser, stock_item_id: uuid.UUID, measured_weight: PositiveQuantity
+):
+    """Berechnet aus dem abgelesenen Gewicht der angebrochenen Packung den Verbrauch."""
+    return movements.weighing_preview(db, user, stock_item_id, measured_weight)
+
+
+@router.post(
+    "/weighings", response_model=BookingResult, status_code=201, description=IDEMPOTENCY_DOC
+)
+def book_weighing(
+    data: WeighingCreate,
+    db: DbSession,
+    user: CurrentUser,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+):
+    """Restmenge per Waage: bucht die Differenz als Verbrauch (Grund `weighed`)."""
+    return run_idempotent(
+        db, user, idempotency_key, "POST /stock/weighings", data,
+        lambda: movements.book_weighing(db, user, data),
+    )  # fmt: skip

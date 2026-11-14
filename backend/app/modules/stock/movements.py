@@ -15,7 +15,7 @@ from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session, aliased
 
 from app.core.errors import ConflictError, NotFoundError, ValidationFailed
-from app.core.units import normalize
+from app.core.units import BaseUnit, normalize
 from app.modules.catalog import service as catalog
 from app.modules.catalog.models import Product
 from app.modules.locations import service as locations
@@ -32,8 +32,11 @@ from app.modules.stock.schemas import (
     PlannedAllocation,
     ReversalCreate,
     TransferCreate,
+    WeighingCreate,
+    WeighingPreview,
 )
 from app.modules.stock.service import _record, item_out, location_paths, lock_product
+from app.modules.stock.weighing import compute_weighing
 from app.modules.users.models import User
 
 
@@ -493,3 +496,73 @@ def recent_products(db: Session, user: User, movement_type: MovementType, limit:
     ).all()
     result = [catalog.product_out(db, p) for p in products]
     return [p for p in result if p.stock_quantity > 0][:limit]
+
+
+# ------------------------------------------------------------------ Restmenge per Waage
+
+
+def _grams(value: Decimal) -> str:
+    """Deutsche Schreibweise ohne überflüssige Nachkommastellen, z. B. 12.500 → "12,5 g"."""
+    text = format(value.normalize(), "f").replace(".", ",")
+    return f"{text} g"
+
+
+def _weighing_for(item: StockItem, measured: Decimal):
+    if item.product.base_unit != BaseUnit.GRAM:
+        raise ValidationFailed(
+            "Restmenge per Waage ist nur bei Produkten in Gramm möglich.",
+            code="weigh_requires_gram",
+        )
+    variant = item.variant
+    return compute_weighing(
+        item.quantity,
+        measured,
+        variant.base_quantity if variant else None,
+        variant.tare_weight if variant else None,
+    )
+
+
+def _get_item(db: Session, user: User, stock_item_id: uuid.UUID) -> StockItem:
+    item = db.get(StockItem, stock_item_id)
+    if item is None or item.household_id != user.household_id:
+        raise NotFoundError("Bestandsposition nicht gefunden.", code="stock_item_not_found")
+    if item.status != StockStatus.AVAILABLE:
+        raise InsufficientStock("Die Position ist nicht mehr vorhanden.")
+    return item
+
+
+def weighing_preview(db: Session, user: User, stock_item_id, measured: Decimal) -> WeighingPreview:
+    """Berechnet den Verbrauch aus einer Wägung, ohne zu buchen."""
+    item = _get_item(db, user, stock_item_id)
+    return WeighingPreview(**_weighing_for(item, measured).__dict__)
+
+
+def book_weighing(db: Session, user: User, data: WeighingCreate) -> BookingResult:
+    """Bucht die Differenz zwischen erwartetem und gewogenem Inhalt als Verbrauch (DEC-029).
+
+    Die Berechnung erfolgt unter Produktsperre auf dem aktuellen Stand der Position, nicht
+    auf dem Stand, den der Client angezeigt hat."""
+    item = _get_item(db, user, data.stock_item_id)
+    product = item.product
+    lock_product(db, product.id)
+    db.refresh(item)
+    if data.expected_version is not None and item.version != data.expected_version:
+        raise StockChanged(
+            "Der Bestand wurde zwischenzeitlich von jemand anderem geändert. "
+            "Bitte die Anzeige aktualisieren und erneut wiegen.",
+        )
+    result = _weighing_for(item, data.measured_weight)
+    if result.consumption == 0:
+        raise ValidationFailed(
+            "Die gewogene Menge entspricht dem bisherigen Bestand – es wurde nichts verbraucht.",
+            code="no_consumption",
+        )
+    note = f"Restmenge gewogen: {_grams(result.net)}"
+    if result.tare:
+        note += f" (abgelesen {_grams(result.measured)}, Leergewicht {_grams(result.tare)})"
+    comment = f"{note}. {data.comment}" if data.comment else note
+    return _take(
+        db, user, product,
+        [AllocationIn(stock_item_id=item.id, quantity=result.consumption)],
+        MovementType.CONSUMPTION, StockStatus.CONSUMED, "weighed", comment,
+    )  # fmt: skip
