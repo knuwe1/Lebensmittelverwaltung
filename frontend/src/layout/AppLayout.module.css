@@ -1,0 +1,28 @@
+.brand {
+  color: inherit;
+  text-decoration: none;
+}
+
+.bottomNav {
+  display: flex;
+  height: 100%;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.bottomItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: var(--mantine-font-size-xs);
+  color: var(--mantine-color-dimmed);
+  text-decoration: none;
+  min-height: 48px;
+}
+
+.bottomItem[data-active] {
+  color: var(--mantine-primary-color-filled);
+  font-weight: 600;
+}
