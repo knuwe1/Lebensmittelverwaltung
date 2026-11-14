@@ -111,3 +111,54 @@ export interface BarcodeLookup {
   product: Product;
   variant_id: string;
 }
+
+export interface PlannedAllocation {
+  stock_item: StockItem;
+  quantity: number;
+}
+
+export interface ConsumptionPlan {
+  allocations: PlannedAllocation[];
+  requested: number;
+  available: number;
+  sufficient: boolean;
+}
+
+export interface BookingResult {
+  transaction_id: string;
+  product: Product;
+  stock_items: StockItem[];
+  quantity: number;
+}
+
+export type MovementType =
+  | 'receipt'
+  | 'consumption'
+  | 'transfer_out'
+  | 'transfer_in'
+  | 'inventory_correction'
+  | 'disposal'
+  | 'reversal';
+
+export interface Movement {
+  id: string;
+  transaction_id: string;
+  movement_type: MovementType;
+  product_id: string;
+  product_name: string;
+  base_unit: BaseUnit;
+  stock_item_id: string;
+  expiry_type: ExpiryType;
+  expiry_date: string | null;
+  source_location_path: string | null;
+  target_location_path: string | null;
+  quantity: number;
+  quantity_delta: number;
+  reason: string | null;
+  comment: string | null;
+  created_at: string;
+  created_by: string;
+  created_by_name: string;
+  reverses_movement_id: string | null;
+  reversed: boolean;
+}

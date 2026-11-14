@@ -61,11 +61,16 @@ export interface StockQuery {
   sort?: 'product' | 'expiry' | 'received';
 }
 
-export function useStock(params: StockQuery) {
+/**
+ * @param keepPrevious Beim Filtern die bisherige Liste weiter anzeigen (verhindert Flackern).
+ *   Für Ansichten eines einzelnen Produkts abschalten – sonst wären kurzzeitig Positionen
+ *   einer anderen Abfrage sichtbar bzw. auswählbar.
+ */
+export function useStock(params: StockQuery, { keepPrevious = true } = {}) {
   return useQuery({
     queryKey: queryKeys.stock(params),
     queryFn: ({ signal }) => api.get<Page<StockItem>>('/stock', { limit: 1000, ...params }, signal),
-    placeholderData: (prev) => prev,
+    placeholderData: keepPrevious ? (prev) => prev : undefined,
   });
 }
 

@@ -1,6 +1,6 @@
 import enum
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -82,3 +82,108 @@ class ReceiptDefaults(BaseModel):
     location_id: uuid.UUID | None
     expiry_type: ExpiryType
     expiry_date: date | None
+
+
+# ------------------------------------------------------------------ Phase 3: Bewegungen
+
+
+class DisposalReason(enum.StrEnum):
+    EXPIRED = "expired"  # Haltbarkeit überschritten
+    SPOILED = "spoiled"  # Verdorben
+    DAMAGED = "damaged"  # Beschädigt
+    OTHER = "other"  # Sonstiger Grund
+
+
+class AllocationIn(BaseModel):
+    """Konkrete Entnahme aus einer Bestandsposition (FR-CNS-002: nachvollziehbar, welcher
+    Bestand reduziert wird). ``expected_version`` erkennt zwischenzeitliche Änderungen."""
+
+    stock_item_id: uuid.UUID
+    quantity: PositiveQuantity
+    expected_version: int | None = None
+
+
+class ConsumptionCreate(BaseModel):
+    """Verbrauch buchen. Entweder explizite ``allocations`` (z. B. bestätigter Vorschlag)
+    oder ``quantity`` – dann verteilt der Server nach FEFO."""
+
+    product_id: uuid.UUID
+    allocations: list[AllocationIn] | None = Field(default=None, max_length=100)
+    quantity: PositiveQuantity | None = None
+    unit: LineUnit = LineUnit.BASE
+    variant_id: uuid.UUID | None = None
+    location_id: uuid.UUID | None = None
+    comment: str | None = Field(default=None, max_length=2000)
+
+    @model_validator(mode="after")
+    def _one_of(self):
+        if bool(self.allocations) == (self.quantity is not None):
+            raise ValueError("Entweder 'allocations' oder 'quantity' angeben.")
+        return self
+
+
+class DisposalCreate(BaseModel):
+    product_id: uuid.UUID
+    allocations: list[AllocationIn] = Field(min_length=1, max_length=100)
+    reason: DisposalReason
+    comment: str | None = Field(default=None, max_length=2000)
+
+
+class TransferCreate(BaseModel):
+    stock_item_id: uuid.UUID
+    quantity: PositiveQuantity
+    target_location_id: uuid.UUID
+    expected_version: int | None = None
+    comment: str | None = Field(default=None, max_length=2000)
+
+
+class ReversalCreate(BaseModel):
+    comment: str | None = Field(default=None, max_length=2000)
+
+
+class PlannedAllocation(BaseModel):
+    stock_item: StockItemOut
+    quantity: Quantity
+
+
+class ConsumptionPlan(BaseModel):
+    allocations: list[PlannedAllocation]
+    requested: Quantity
+    available: Quantity
+    sufficient: bool
+
+
+class BookingResult(BaseModel):
+    transaction_id: uuid.UUID
+    product: ProductOut
+    # Betroffene Positionen nach der Buchung (Menge 0 = aufgelöst)
+    stock_items: list[StockItemOut]
+    quantity: Quantity
+
+
+class MovementOut(BaseModel):
+    id: uuid.UUID
+    transaction_id: uuid.UUID
+    movement_type: str
+    product_id: uuid.UUID
+    product_name: str
+    base_unit: BaseUnit
+    stock_item_id: uuid.UUID
+    expiry_type: ExpiryType
+    expiry_date: date | None
+    source_location_path: str | None
+    target_location_path: str | None
+    quantity: Quantity
+    quantity_delta: Quantity
+    reason: str | None
+    comment: str | None
+    created_at: datetime
+    created_by: uuid.UUID
+    created_by_name: str
+    reverses_movement_id: uuid.UUID | None
+    reversed: bool
+
+
+class MovementPage(BaseModel):
+    items: list[MovementOut]
+    total: int

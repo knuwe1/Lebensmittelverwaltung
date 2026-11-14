@@ -1,6 +1,8 @@
 import {
   IconBuildingWarehouse,
+  IconHistory,
   IconLayoutDashboard,
+  IconPackageExport,
   IconPackageImport,
   IconPackages,
   IconSettings,
@@ -19,9 +21,11 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: IconLayoutDashboard },
   { to: '/einlagern', label: 'Einlagern', icon: IconPackageImport },
+  { to: '/entnehmen', label: 'Entnehmen', icon: IconPackageExport },
   { to: '/vorraete', label: 'Vorräte', icon: IconPackages },
   { to: '/lebensmittel', label: 'Lebensmittel', icon: IconToolsKitchen2 },
   { to: '/lagerplaetze', label: 'Lagerplätze', icon: IconBuildingWarehouse },
+  { to: '/historie', label: 'Historie', icon: IconHistory },
   { to: '/einstellungen', label: 'Einstellungen', icon: IconSettings },
 ];
 
@@ -29,6 +33,6 @@ export const NAV_ITEMS: NavItem[] = [
 export const MOBILE_ACTIONS: NavItem[] = [
   { to: '/', label: 'Start', icon: IconLayoutDashboard },
   { to: '/einlagern', label: 'Einlagern', icon: IconPackageImport },
+  { to: '/entnehmen', label: 'Entnehmen', icon: IconPackageExport },
   { to: '/vorraete', label: 'Vorräte', icon: IconPackages },
-  { to: '/lebensmittel', label: 'Lebensmittel', icon: IconToolsKitchen2 },
 ];

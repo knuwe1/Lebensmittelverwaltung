@@ -71,7 +71,8 @@ def run_idempotent(
             raise ValidationFailed("Die Anfrage wird noch verarbeitet.", code="in_progress")
         if record.request_hash != request_hash:
             raise IdempotencyKeyReused(
-                "Dieser Idempotency-Key wurde bereits für eine andere Anfrage verwendet."
+                "Die vorherige Buchung wurde bereits gespeichert. Bitte den Bestand prüfen und "
+                "die geänderte Buchung erneut absenden."
             )
         return JSONResponse(
             record.response_body,

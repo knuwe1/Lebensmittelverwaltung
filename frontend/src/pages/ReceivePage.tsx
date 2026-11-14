@@ -13,13 +13,13 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { DateInput } from '@mantine/dates';
 import { notifications } from '@mantine/notifications';
 import { IconArrowLeft, IconCheck, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation as useRouterLocation } from 'react-router-dom';
 import { api, errorMessage, newIdempotencyKey } from '../api/client';
 import type { ExpiryType, Product, ReceiptDefaults, ReceiptResult } from '../api/types';
+import { GermanDateInput } from '../components/GermanDateInput';
 import { ProductAvatar } from '../components/ProductAvatar';
 import { ProductForm } from '../components/ProductForm';
 import { ProductSearch } from '../components/ProductSearch';
@@ -73,13 +73,20 @@ function ReceiptForm({
   const defaults = useQuery({
     queryKey: ['receipt-defaults', product.id],
     queryFn: () => api.get<ReceiptDefaults>('/stock/receipt-defaults', { product_id: product.id }),
-    staleTime: 0,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
   });
+  // Vorschläge genau einmal übernehmen – nie bereits getätigte Eingaben überschreiben
+  // (z. B. wenn die Antwort erst nach dem Tippen eintrifft).
+  const defaultsApplied = useRef(false);
+  const edited = useRef(false);
   useEffect(() => {
     const d = defaults.data;
-    if (!d) return;
-    if (!initialVariantId) setVariantId(d.variant_id ?? BASE);
+    if (!d || defaultsApplied.current) return;
+    defaultsApplied.current = true;
     setLocationId((cur) => cur ?? d.location_id);
+    if (edited.current) return;
+    if (!initialVariantId) setVariantId(d.variant_id ?? BASE);
     setLines([newLine(d.expiry_type, fromIsoDate(d.expiry_date))]);
   }, [defaults.data, initialVariantId]);
 
@@ -119,8 +126,10 @@ function ReceiptForm({
     onError: (e) => notifications.show({ color: 'red', title: 'Nicht gebucht', message: errorMessage(e) }),
   });
 
-  const update = (key: number, patch: Partial<Line>) =>
+  const update = (key: number, patch: Partial<Line>) => {
+    edited.current = true;
     setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+  };
 
   return (
     <Stack>
@@ -146,7 +155,11 @@ function ReceiptForm({
           { value: BASE, label: `Menge in ${unitShort(product.base_unit)}` },
         ]}
         value={variantId}
-        onChange={(v) => v && setVariantId(v)}
+        onChange={(v) => {
+          if (!v) return;
+          edited.current = true;
+          setVariantId(v);
+        }}
         allowDeselect={false}
       />
 
@@ -190,14 +203,11 @@ function ReceiptForm({
               ]}
             />
             {needsDate(line) && (
-              <DateInput
+              <GermanDateInput
                 label={EXPIRY_TYPE_LABELS[line.expiryType]}
-                valueFormat="DD.MM.YYYY"
-                placeholder="TT.MM.JJJJ"
                 value={line.expiryDate}
                 onChange={(d) => update(line.key, { expiryDate: d })}
                 size="md"
-                clearable
               />
             )}
           </Stack>
@@ -206,7 +216,10 @@ function ReceiptForm({
       <Button
         variant="subtle"
         leftSection={<IconPlus size={18} />}
-        onClick={() => setLines((ls) => [...ls, newLine(ls[ls.length - 1].expiryType)])}
+        onClick={() => {
+          edited.current = true;
+          setLines((ls) => [...ls, newLine(ls[ls.length - 1].expiryType)]);
+        }}
       >
         Weiteres Haltbarkeitsdatum
       </Button>

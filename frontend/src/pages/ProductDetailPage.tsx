@@ -19,17 +19,18 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { IconCamera, IconEdit, IconPackageImport, IconPlus, IconStar, IconTrash } from '@tabler/icons-react';
+import { IconArrowsTransferUp, IconCamera, IconEdit, IconPackageExport, IconPackageImport, IconPlus, IconStar, IconTrash } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, errorMessage } from '../api/client';
 import { useLocations, useProduct, useStock } from '../api/hooks';
-import type { Product, Variant } from '../api/types';
+import type { Product, StockItem, Variant } from '../api/types';
 import { useUser } from '../auth/AuthContext';
 import { ProductAvatar } from '../components/ProductAvatar';
 import { ProductForm } from '../components/ProductForm';
 import { COMPATIBLE_PACKAGE_UNITS, formatNumber, formatQuantity, PACKAGE_UNIT_LABELS, unitShort, variantLabel } from '../lib/format';
-import { ExpiryText } from './StockPage';
+import { ExpiryText } from '../components/ExpiryText';
+import { TransferDialog } from '../components/TransferDialog';
 
 function VariantForm({ product, onDone }: { product: Product; onDone: () => void }) {
   const qc = useQueryClient();
@@ -74,10 +75,11 @@ export function ProductDetailPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { data: product, isLoading } = useProduct(id);
-  const { data: stock } = useStock({ product_id: id, sort: 'expiry' });
+  const { data: stock } = useStock({ product_id: id, sort: 'expiry' }, { keepPrevious: false });
   const { data: locations = [] } = useLocations();
   const [editOpen, edit] = useDisclosure();
   const [variantOpen, variantModal] = useDisclosure();
+  const [transferItem, setTransferItem] = useState<StockItem | null>(null);
 
   const refresh = (p?: Product) => {
     if (p) qc.setQueryData(['product', p.id], p);
@@ -137,6 +139,14 @@ export function ProductDetailPage() {
       <Group>
         <Button leftSection={<IconPackageImport size={18} />} onClick={() => navigate('/einlagern', { state: { product } })} disabled={!product.active}>
           Einlagern
+        </Button>
+        <Button
+          variant="light"
+          leftSection={<IconPackageExport size={18} />}
+          onClick={() => navigate('/entnehmen', { state: { product } })}
+          disabled={product.stock_quantity <= 0}
+        >
+          Entnehmen
         </Button>
         <FileButton onChange={(f) => f && upload.mutate(f)} accept="image/*" capture="environment">
           {(props) => (
@@ -213,6 +223,11 @@ export function ProductDetailPage() {
                 <Table.Td>{i.location_path}</Table.Td>
                 <Table.Td><ExpiryText item={i} /></Table.Td>
                 <Table.Td align="right">{formatQuantity(i.quantity, i.base_unit)}</Table.Td>
+                <Table.Td align="right" w={40}>
+                  <ActionIcon variant="subtle" onClick={() => setTransferItem(i)} aria-label="Umlagern">
+                    <IconArrowsTransferUp size={18} />
+                  </ActionIcon>
+                </Table.Td>
               </Table.Tr>
             ))}
             {stock?.total === 0 && (
@@ -240,6 +255,7 @@ export function ProductDetailPage() {
         </Text>
       )}
 
+      <TransferDialog item={transferItem} onClose={() => setTransferItem(null)} />
       <Modal opened={editOpen} onClose={edit.close} title="Lebensmittel bearbeiten" size="lg">
         <ProductForm product={product} onCancel={edit.close} onSaved={() => edit.close()} />
       </Modal>
