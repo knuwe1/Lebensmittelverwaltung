@@ -117,6 +117,34 @@ docker compose pull && docker compose up -d
 Datenbankmigrationen laufen beim Start des Backends automatisch. Vor einem Update
 empfiehlt sich eine manuelle Sicherung.
 
+## Testen auf dem eigenen Rechner und Handy
+
+Schnellster Weg ohne Tailscale – Rechner und Handy im selben WLAN
+(`192.168.178.105` durch die eigene IP ersetzen, siehe `hostname -I`):
+
+```bash
+cat > .env <<EOF
+POSTGRES_PASSWORD=$(openssl rand -hex 12)
+LMV_SECRET_KEY=$(openssl rand -hex 32)
+LMV_BOOTSTRAP_ADMIN_USERNAME=admin
+LMV_BOOTSTRAP_ADMIN_PASSWORD=admin12345
+LMV_SITE_ADDRESS=localhost, 192.168.178.105
+LMV_DEFAULT_SNI=192.168.178.105
+LMV_TLS_MODE=internal
+EOF
+docker compose up -d --build
+```
+
+- Rechner: `https://localhost`
+- Handy: `https://192.168.178.105`
+
+Der Browser warnt vor dem Zertifikat (lokale Zertifizierungsstelle). Zum Testen
+über *Erweitert → Weiter zu …* bestätigen. Für die Installation als App und den
+dauerhaften Gebrauch Tailscale verwenden (siehe oben).
+
+Beenden: `docker compose down` (Daten bleiben erhalten) bzw.
+`docker compose down -v` (Daten werden gelöscht).
+
 ## Lokale Entwicklung
 
 ```bash

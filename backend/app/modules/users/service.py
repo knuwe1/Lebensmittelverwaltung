@@ -70,6 +70,9 @@ def bootstrap_admin(db: Session, username: str, password: str, household_name: s
         household = Household(name=household_name)
         db.add(household)
         db.flush()
+        from app.modules.catalog.service import seed_default_categories
+
+        seed_default_categories(db, household.id)
     create_user(
         db,
         household.id,

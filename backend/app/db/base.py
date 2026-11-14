@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, MetaData, func
+from sqlalchemy import DateTime, Enum, MetaData, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 NAMING_CONVENTION = {
@@ -27,4 +27,15 @@ class Timestamps:
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
+def str_enum(cls, name: str) -> Enum:
+    """Enum als VARCHAR speichern (vereinfacht Migrationen gegenüber nativen PG-Enums)."""
+    return Enum(
+        cls,
+        name=name,
+        native_enum=False,
+        length=20,
+        values_callable=lambda e: [m.value for m in e],
     )

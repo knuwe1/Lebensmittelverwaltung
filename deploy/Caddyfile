@@ -1,5 +1,7 @@
 {
 	admin off
+	# Zertifikat für Verbindungen ohne Servernamen, z. B. Aufruf über die IP-Adresse im WLAN
+	default_sni {$LMV_DEFAULT_SNI:localhost}
 }
 
 # Zertifikatsquelle über LMV_TLS_MODE (siehe docs/BETRIEB.md):

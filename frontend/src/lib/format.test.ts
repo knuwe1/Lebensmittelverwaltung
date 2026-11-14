@@ -19,3 +19,19 @@ describe('format', () => {
     expect(formatDate(null)).toBe('–');
   });
 });
+
+import { fromIsoDate, toIsoDate, variantLabel } from './format';
+
+describe('Varianten und Datum', () => {
+  it('beschriftet Varianten', () => {
+    expect(variantLabel({ name: null, package_quantity: 1.5, package_unit: 'kg' })).toBe('1,5 kg');
+    expect(variantLabel({ name: 'Sixpack', package_quantity: 6, package_unit: 'piece' })).toBe(
+      'Sixpack (6 Stück)',
+    );
+  });
+
+  it('wandelt Datum ohne Zeitzonenfehler', () => {
+    expect(toIsoDate(new Date(2026, 10, 20))).toBe('2026-11-20');
+    expect(toIsoDate(fromIsoDate('2026-01-01')!)).toBe('2026-01-01');
+  });
+});

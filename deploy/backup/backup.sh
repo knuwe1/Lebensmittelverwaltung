@@ -7,7 +7,7 @@ TARGET="/backups/lmv-$STAMP"
 mkdir -p "$TARGET.partial"
 
 pg_dump --format=custom --no-owner --file="$TARGET.partial/db.dump"
-tar -czf "$TARGET.partial/media.tar.gz" -C /media .
+tar -czf "$TARGET.partial/media.tar.gz" -C /lmv-media .
 mv "$TARGET.partial" "$TARGET"
 echo "$(date -Iseconds) Sicherung erstellt: $TARGET"
 

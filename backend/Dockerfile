@@ -12,8 +12,8 @@ COPY alembic ./alembic
 COPY app ./app
 COPY docker-entrypoint.sh ./
 
-RUN useradd --system --uid 10001 --home /app lmv && mkdir -p /data/media && chown -R lmv /data
-USER lmv
+RUN useradd --system --uid 10001 --user-group --home /app lmv && mkdir -p /data/media && chown -R lmv:lmv /data
+# Kein USER: der Entrypoint korrigiert die Volume-Rechte als root und wechselt dann zu lmv.
 ENV PATH="/opt/venv/bin:$PATH" LMV_MEDIA_DIR=/data/media
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
