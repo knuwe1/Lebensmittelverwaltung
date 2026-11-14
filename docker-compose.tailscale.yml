@@ -1,0 +1,6 @@
+# Ergänzung für LMV_TLS_MODE=tailscale: Caddy bezieht das HTTPS-Zertifikat
+# über den Tailscale-Dienst des Hosts. Aktivierung über COMPOSE_FILE in .env.
+services:
+  web:
+    volumes:
+      - /var/run/tailscale/tailscaled.sock:/var/run/tailscale/tailscaled.sock
