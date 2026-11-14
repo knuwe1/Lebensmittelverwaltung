@@ -4,8 +4,13 @@ import type { ReactNode } from 'react';
 import { useAuth } from './auth/AuthContext';
 import { AppLayout } from './layout/AppLayout';
 import { DashboardPage } from './pages/DashboardPage';
+import { LocationsPage } from './pages/LocationsPage';
 import { LoginPage } from './pages/LoginPage';
+import { ProductDetailPage } from './pages/ProductDetailPage';
+import { ProductsPage } from './pages/ProductsPage';
+import { ReceivePage } from './pages/ReceivePage';
 import { SettingsPage } from './pages/SettingsPage';
+import { StockPage } from './pages/StockPage';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -42,6 +47,11 @@ export function App() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route path="einlagern" element={<ReceivePage />} />
+        <Route path="vorraete" element={<StockPage />} />
+        <Route path="lebensmittel" element={<ProductsPage />} />
+        <Route path="lebensmittel/:id" element={<ProductDetailPage />} />
+        <Route path="lagerplaetze" element={<LocationsPage />} />
         <Route path="einstellungen" element={<SettingsPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>
