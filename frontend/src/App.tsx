@@ -1,0 +1,50 @@
+import { Center, Loader, Stack, Text, Title } from '@mantine/core';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { useAuth } from './auth/AuthContext';
+import { AppLayout } from './layout/AppLayout';
+import { DashboardPage } from './pages/DashboardPage';
+import { LoginPage } from './pages/LoginPage';
+import { SettingsPage } from './pages/SettingsPage';
+
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) {
+    return (
+      <Center mih="100dvh">
+        <Loader />
+      </Center>
+    );
+  }
+  if (!user) return <Navigate to="/anmelden" replace state={{ from: location }} />;
+  return <>{children}</>;
+}
+
+function NotFound() {
+  return (
+    <Stack>
+      <Title order={2}>Seite nicht gefunden</Title>
+      <Text>Die angeforderte Seite existiert nicht.</Text>
+    </Stack>
+  );
+}
+
+export function App() {
+  return (
+    <Routes>
+      <Route path="/anmelden" element={<LoginPage />} />
+      <Route
+        element={
+          <RequireAuth>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<DashboardPage />} />
+        <Route path="einstellungen" element={<SettingsPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Route>
+    </Routes>
+  );
+}
