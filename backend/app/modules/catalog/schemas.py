@@ -31,6 +31,7 @@ class VariantIn(BaseModel):
     barcode: str | None = Field(default=None, max_length=32)
     package_quantity: PositiveQuantity
     package_unit: PackageUnit
+    tare_weight: NonNegativeQuantity | None = None
     is_default: bool = False
 
 
@@ -39,6 +40,7 @@ class VariantUpdate(BaseModel):
     barcode: str | None = Field(default=None, max_length=32)
     package_quantity: PositiveQuantity | None = None
     package_unit: PackageUnit | None = None
+    tare_weight: NonNegativeQuantity | None = None
     is_default: bool | None = None
 
 
@@ -51,6 +53,7 @@ class VariantOut(BaseModel):
     package_quantity: Quantity
     package_unit: PackageUnit
     base_quantity: Quantity
+    tare_weight: Quantity | None
     is_default: bool
     active: bool
 
@@ -72,6 +75,7 @@ class ProductCreate(BaseModel):
     expiry_warning_days: int | None = Field(default=None, ge=0, le=3650)
     notes: str | None = Field(default=None, max_length=5000)
     image_source: str | None = Field(default=None, max_length=200)
+    weigh_remaining: bool = False
     variants: list[VariantIn] = Field(default_factory=list, max_length=50)
 
     @model_validator(mode="after")
@@ -91,6 +95,7 @@ class ProductUpdate(BaseModel):
     default_shelf_life_days: int | None = Field(default=None, ge=0, le=36500)
     expiry_warning_days: int | None = Field(default=None, ge=0, le=3650)
     notes: str | None = Field(default=None, max_length=5000)
+    weigh_remaining: bool | None = None
     active: bool | None = None
 
 
@@ -109,6 +114,7 @@ class ProductOut(BaseModel):
     default_shelf_life_days: int | None
     expiry_warning_days: int | None
     notes: str | None
+    weigh_remaining: bool
     active: bool
     has_image: bool
     image_source: str | None

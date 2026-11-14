@@ -143,6 +143,43 @@ def main(pw):
     assert total == 1400, total
     step("Doppelte Entnahme-Anfrage nur einmal gebucht")
 
+    # Restmenge per Waage (DEC-029): 3 × 1 kg Zucker, Tüte 5 g
+    zucker = api.post(
+        f"{BASE}/api/v1/products",
+        data={
+            "name": "Testzucker",
+            "category_id": cat,
+            "base_unit": "g",
+            "weigh_remaining": True,
+            "variants": [{"package_quantity": 1, "package_unit": "kg", "tare_weight": 5}],
+        },
+    ).json()
+    api.post(
+        f"{BASE}/api/v1/stock/receipts",
+        data={
+            "product_id": zucker["id"],
+            "variant_id": zucker["variants"][0]["id"],
+            "location_id": kuehl["id"],
+            "lines": [{"quantity": 3}],
+        },
+        headers={"Idempotency-Key": str(uuid.uuid4())},
+    )
+    for measured, expected_use, expected_total in [("655", "350 g", 2650), ("405", "250 g", 2400)]:
+        page.goto(f"{BASE}/entnehmen")
+        page.get_by_placeholder("Produktname oder Barcode").fill("Testzucker")
+        page.locator("button", has_text="Milchprodukte").first.click()
+        expect(page.get_by_text("Restgewicht wiegen")).to_be_visible()
+        page.get_by_label("Abgelesenes Gewicht (g)").fill(measured)
+        button = page.get_by_role("button", name=f"{expected_use} als Verbrauch buchen")
+        expect(button).to_be_enabled()
+        if measured == "655":
+            page.screenshot(path=f"{OUT}/5-wiegen.png", full_page=True)
+        button.click()
+        expect(page.get_by_text(re.compile(r"entnommen\. Neuer Bestand"))).to_be_visible()
+        total = api.get(f"{BASE}/api/v1/products/{zucker['id']}").json()["stock_quantity"]
+        assert total == expected_total, total
+    step("Restmenge per Waage: 655 g → 350 g, danach 405 g → 250 g Verbrauch")
+
     browser.close()
 
 

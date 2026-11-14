@@ -221,6 +221,7 @@ def _build_variant(product: Product, data: VariantIn) -> ProductVariant:
         package_quantity=data.package_quantity,
         package_unit=data.package_unit,
         base_quantity=to_base_quantity(data.package_quantity, data.package_unit, product.base_unit),
+        tare_weight=data.tare_weight,
         is_default=data.is_default,
     )
 
@@ -268,6 +269,14 @@ def _check_barcode_free(db: Session, household_id, code: str | None, own_variant
         )
 
 
+def _check_weigh_remaining(enabled: bool, base_unit: BaseUnit) -> None:
+    if enabled and base_unit != BaseUnit.GRAM:
+        raise ValidationFailed(
+            "Restmenge per Waage ist nur bei Produkten mit der Basiseinheit Gramm möglich.",
+            code="weigh_requires_gram",
+        )
+
+
 def create_product(db: Session, user: User, data: ProductCreate) -> Product:
     if not user.is_admin and (data.minimum_stock is not None or data.target_stock is not None):
         raise PermissionDenied(
@@ -275,6 +284,7 @@ def create_product(db: Session, user: User, data: ProductCreate) -> Product:
             code="stock_levels_admin_only",
         )
     _validate_refs(db, user.household_id, data.category_id, data.default_location_id)
+    _check_weigh_remaining(data.weigh_remaining, data.base_unit)
     product = Product(
         household_id=user.household_id,
         **data.model_dump(exclude={"variants"}),
@@ -316,6 +326,11 @@ def update_product(db: Session, household_id, product_id, data: ProductUpdate) -
             v.base_quantity = to_base_quantity(
                 v.package_quantity, v.package_unit, BaseUnit(new_unit)
             )
+
+    _check_weigh_remaining(
+        changes.get("weigh_remaining", product.weigh_remaining) or False,
+        BaseUnit(changes.get("base_unit") or product.base_unit),
+    )
 
     minimum = changes.get("minimum_stock", product.minimum_stock)
     target = changes.get("target_stock", product.target_stock)
@@ -381,6 +396,8 @@ def update_variant(db: Session, household_id, product_id, variant_id, data: Vari
         _check_barcode_free(db, household_id, variant.barcode, variant.id)
     if "name" in changes:
         variant.name = changes["name"]
+    if "tare_weight" in changes:
+        variant.tare_weight = changes["tare_weight"]
     if changes.get("package_quantity") is not None:
         variant.package_quantity = changes["package_quantity"]
     if changes.get("package_unit") is not None:
