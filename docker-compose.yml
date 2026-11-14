@@ -70,7 +70,12 @@ services:
     volumes:
       - ./deploy/backup:/scripts:ro
       - ${LMV_BACKUP_DIR:-./backups}:/backups
-      - media:/media
+      # eigener Pfad + nocopy: das Volume nicht mit Inhalten aus dem Postgres-Image befüllen
+      - type: volume
+        source: media
+        target: /lmv-media
+        volume:
+          nocopy: true
     depends_on:
       db:
         condition: service_healthy

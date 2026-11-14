@@ -7,6 +7,6 @@ SRC="/backups/$NAME"
 [ -f "$SRC/db.dump" ] || { echo "Keine Sicherung in $SRC gefunden" >&2; exit 1; }
 
 pg_restore --clean --if-exists --no-owner --single-transaction --dbname="$PGDATABASE" "$SRC/db.dump"
-find /media -mindepth 1 -delete
-tar -xzf "$SRC/media.tar.gz" -C /media
+find /lmv-media -mindepth 1 -delete
+tar -xzf "$SRC/media.tar.gz" -C /lmv-media
 echo "Wiederherstellung aus $SRC abgeschlossen."
