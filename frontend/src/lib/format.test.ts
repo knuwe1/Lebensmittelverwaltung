@@ -35,3 +35,37 @@ describe('Varianten und Datum', () => {
     expect(toIsoDate(fromIsoDate('2026-01-01')!)).toBe('2026-01-01');
   });
 });
+
+import { parseGermanDate } from './format';
+
+describe('parseGermanDate', () => {
+  const today = new Date(2026, 10, 14); // 14.11.2026
+  const iso = (s: string) => {
+    const d = parseGermanDate(s, today);
+    return d ? toIsoDate(d) : null;
+  };
+
+  it('liest übliche Schreibweisen', () => {
+    expect(iso('20.11.2027')).toBe('2027-11-20');
+    expect(iso('20.11.27')).toBe('2027-11-20');
+    expect(iso('1.2.2027')).toBe('2027-02-01');
+    expect(iso('201127')).toBe('2027-11-20');
+    expect(iso('20112027')).toBe('2027-11-20');
+    expect(iso('20/11/2027')).toBe('2027-11-20');
+    expect(iso(' 20.11.2027 ')).toBe('2027-11-20');
+  });
+
+  it('ergänzt fehlendes Jahr zukunftsgerichtet', () => {
+    expect(iso('20.11.')).toBe('2026-11-20');
+    expect(iso('20.11')).toBe('2026-11-20');
+    expect(iso('14.11.')).toBe('2026-11-14');
+    expect(iso('01.03.')).toBe('2027-03-01');
+  });
+
+  it('weist Ungültiges ab', () => {
+    expect(iso('31.02.2027')).toBeNull();
+    expect(iso('2027-11-20')).toBeNull();
+    expect(iso('abc')).toBeNull();
+    expect(iso('')).toBeNull();
+  });
+});

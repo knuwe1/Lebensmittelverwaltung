@@ -3,7 +3,9 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuth } from './auth/AuthContext';
 import { AppLayout } from './layout/AppLayout';
+import { ConsumePage } from './pages/ConsumePage';
 import { DashboardPage } from './pages/DashboardPage';
+import { HistoryPage } from './pages/HistoryPage';
 import { LocationsPage } from './pages/LocationsPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
@@ -48,7 +50,9 @@ export function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="einlagern" element={<ReceivePage />} />
+        <Route path="entnehmen" element={<ConsumePage />} />
         <Route path="vorraete" element={<StockPage />} />
+        <Route path="historie" element={<HistoryPage />} />
         <Route path="lebensmittel" element={<ProductsPage />} />
         <Route path="lebensmittel/:id" element={<ProductDetailPage />} />
         <Route path="lagerplaetze" element={<LocationsPage />} />

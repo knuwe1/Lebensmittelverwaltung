@@ -84,3 +84,58 @@ export function fromIsoDate(iso: string | null | undefined): Date | null {
 export function unitShort(unit: BaseUnit): string {
   return unit === 'piece' ? 'Stück' : unit;
 }
+
+export const MOVEMENT_LABELS: Record<string, string> = {
+  receipt: 'Einlagerung',
+  consumption: 'Verbrauch',
+  transfer_out: 'Umlagerung (Abgang)',
+  transfer_in: 'Umlagerung (Zugang)',
+  inventory_correction: 'Inventurkorrektur',
+  disposal: 'Entsorgung',
+  reversal: 'Storno',
+};
+
+export const DISPOSAL_REASONS: Record<string, string> = {
+  expired: 'Haltbarkeit überschritten',
+  spoiled: 'Verdorben',
+  damaged: 'Beschädigt',
+  other: 'Sonstiger Grund',
+};
+
+/** Haltbarkeitsstatus einer Position (vereinfachte Vorstufe zu FR-EXP-003, Phase 5). */
+export function isExpired(item: { expiry_type: string; expiry_date: string | null }, today = new Date()): boolean {
+  return !!item.expiry_date && item.expiry_date < toIsoDate(today);
+}
+
+/**
+ * Liest ein deutsch eingegebenes Datum (Spez. 9.6), wie es von Verpackungen abgetippt wird:
+ * "20.11.2027", "20.11.27", "20.11." (aktuelles/nächstes Jahr), "201127", "20112027",
+ * auch mit "/" oder "-" als Trenner. Zweistellige Jahre werden als 20xx gelesen.
+ * Ungültige Angaben (z. B. 31.02.) liefern null.
+ */
+export function parseGermanDate(input: string, today = new Date()): Date | null {
+  const s = input.trim();
+  if (!s) return null;
+  let d: number, m: number, y: number | undefined;
+  const sep = s.match(/^(\d{1,2})[./-](\d{1,2})[./-]?(\d{2}|\d{4})?$/);
+  const compact = s.match(/^(\d{2})(\d{2})(\d{2}|\d{4})$/);
+  if (sep) {
+    [d, m] = [Number(sep[1]), Number(sep[2])];
+    y = sep[3] ? Number(sep[3]) : undefined;
+  } else if (compact) {
+    [d, m, y] = [Number(compact[1]), Number(compact[2]), Number(compact[3])];
+  } else {
+    return null;
+  }
+  if (y === undefined) {
+    // Ohne Jahr: nächstes Vorkommen dieses Tages (Haltbarkeitsdaten liegen in der Zukunft)
+    y = today.getFullYear();
+    const candidate = new Date(y, m - 1, d);
+    if (candidate < new Date(today.getFullYear(), today.getMonth(), today.getDate())) y += 1;
+  } else if (y < 100) {
+    y += 2000;
+  }
+  const date = new Date(y, m - 1, d);
+  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
+  return date;
+}

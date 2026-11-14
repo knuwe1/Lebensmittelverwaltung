@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  ActionIcon,
   Badge,
   Card,
   Group,
@@ -13,28 +14,14 @@ import {
   Title,
 } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
-import { IconSearch } from '@tabler/icons-react';
+import { IconArrowsTransferUp, IconSearch } from '@tabler/icons-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useStock } from '../api/hooks';
 import type { StockItem } from '../api/types';
 import { CategorySelect, LocationSelect } from '../components/selects';
-import { formatDate, formatQuantity } from '../lib/format';
-
-const EXPIRY_SHORT: Record<string, string> = {
-  best_before: 'MHD',
-  use_by: 'Verbr.',
-  none: 'ohne Datum',
-  unknown: 'Datum unbekannt',
-};
-
-export function ExpiryText({ item }: { item: Pick<StockItem, 'expiry_type' | 'expiry_date'> }) {
-  if (!item.expiry_date) return <Text span c="dimmed" size="sm">{EXPIRY_SHORT[item.expiry_type]}</Text>;
-  return (
-    <Text span size="sm">
-      {EXPIRY_SHORT[item.expiry_type]} {formatDate(item.expiry_date)}
-    </Text>
-  );
-}
+import { formatQuantity } from '../lib/format';
+import { ExpiryText } from '../components/ExpiryText';
+import { TransferDialog } from '../components/TransferDialog';
 
 interface Group_ {
   productId: string;
@@ -49,6 +36,7 @@ interface Group_ {
 export function StockPage() {
   const [params, setParams] = useSearchParams();
   const [q, setQ] = useState('');
+  const [transferItem, setTransferItem] = useState<StockItem | null>(null);
   const [debounced] = useDebouncedValue(q.trim(), 250);
   const locationId = params.get('lagerplatz');
   const categoryId = params.get('gruppe');
@@ -167,12 +155,16 @@ export function StockPage() {
                   <Text size="sm" w={90} ta="right">
                     {formatQuantity(i.quantity, i.base_unit)}
                   </Text>
+                  <ActionIcon variant="subtle" size="sm" onClick={() => setTransferItem(i)} aria-label="Umlagern">
+                    <IconArrowsTransferUp size={16} />
+                  </ActionIcon>
                 </Group>
               ))}
             </Card>
           ))}
         </Stack>
       )}
+      <TransferDialog item={transferItem} onClose={() => setTransferItem(null)} />
       {data && data.total > data.items.length && (
         <Text c="dimmed" size="sm" ta="center">
           {data.items.length} von {data.total} Positionen angezeigt – bitte Filter verwenden.
