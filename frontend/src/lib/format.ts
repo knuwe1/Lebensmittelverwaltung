@@ -102,11 +102,6 @@ export const DISPOSAL_REASONS: Record<string, string> = {
   other: 'Sonstiger Grund',
 };
 
-/** Haltbarkeitsstatus einer Position (vereinfachte Vorstufe zu FR-EXP-003, Phase 5). */
-export function isExpired(item: { expiry_type: string; expiry_date: string | null }, today = new Date()): boolean {
-  return !!item.expiry_date && item.expiry_date < toIsoDate(today);
-}
-
 /**
  * Liest ein deutsch eingegebenes Datum (Spez. 9.6), wie es von Verpackungen abgetippt wird:
  * "20.11.2027", "20.11.27", "20.11." (aktuelles/nächstes Jahr), "201127", "20112027",

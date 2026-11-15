@@ -1,6 +1,6 @@
 """Browser-Durchlauf der mobilen Kernabläufe auf einem simulierten Android-Gerät (Pixel 7):
 Einlagern (Barcode, zwei MHD), Entnehmen (FEFO), Entsorgen, Umlagern, Historie mit Storno,
-Schutz vor Doppelbuchungen.
+Schutz vor Doppelbuchungen, Restmenge per Waage, Warnungen zu Bestand und Haltbarkeit.
 
 Erwartet einen frisch gestarteten, leeren Stack mit Administrator admin / adminpass123.
 Aufruf siehe e2e/README.md.
@@ -9,6 +9,7 @@ Aufruf siehe e2e/README.md.
 import re
 import sys
 import uuid
+from datetime import date, timedelta
 
 from playwright.sync_api import expect, sync_playwright
 
@@ -200,6 +201,67 @@ def main(pw):
         total = api.get(f"{BASE}/api/v1/products/{zucker['id']}").json()["stock_quantity"]
         assert total == expected_total, total
     step("Restmenge per Waage: 655 g → 350 g, danach 405 g → 250 g Verbrauch")
+
+    # Phase 5a: Mindestbestand und Haltbarkeit. Joghurt: 2 Stück mit gestern überschrittenem
+    # Verbrauchsdatum (physisch da, aber nicht verfügbar) und 1 Stück, MHD in 2 Tagen.
+    joghurt = api.post(
+        f"{BASE}/api/v1/products",
+        data={
+            "name": "Testjoghurt",
+            "category_id": cat,
+            "base_unit": "piece",
+            "minimum_stock": 4,
+            "target_stock": 8,
+        },
+    ).json()
+    day = lambda n: (date.today() + timedelta(days=n)).isoformat()  # noqa: E731
+    api.post(
+        f"{BASE}/api/v1/stock/receipts",
+        data={
+            "product_id": joghurt["id"],
+            "location_id": kuehl["id"],
+            "lines": [
+                {"quantity": 2, "unit": "base", "expiry_type": "use_by", "expiry_date": day(-1)},
+                {"quantity": 1, "unit": "base", "expiry_type": "best_before", "expiry_date": day(2)},
+            ],
+        },
+        headers={"Idempotency-Key": str(uuid.uuid4())},
+    )
+    page.goto(f"{BASE}/")
+    low = page.locator(".mantine-Card-root", has_text="Niedriger Bestand")
+    expect(low.get_by_text("Testjoghurt")).to_be_visible()
+    expect(low.get_by_text("Mindestbestand unterschritten")).to_be_visible()
+    exp = page.locator(".mantine-Card-root", has_text="Alle anzeigen").filter(has_text="Haltbarkeit")
+    expect(exp.get_by_text(re.compile("nicht mehr verwenden"))).to_be_visible()
+    expect(exp.get_by_text(re.compile(r"in 2 Tagen"))).to_be_visible()
+    page.screenshot(path=f"{OUT}/6-dashboard-warnungen.png", full_page=True)
+    step("Dashboard warnt vor niedrigem Bestand und Ablauf")
+
+    page.goto(f"{BASE}/haltbarkeit")
+    expect(page.get_by_text("Abgelaufen (1)")).to_be_visible()
+    expect(page.get_by_text("Bald (1)")).to_be_visible()
+    page.screenshot(path=f"{OUT}/7-haltbarkeit.png", full_page=True)
+    expired_card = page.locator(".mantine-Card-root", has_text="nicht mehr verwenden")
+    # Überschrittenes Verbrauchsdatum: nur Entsorgen anbieten, nicht Entnehmen
+    expect(expired_card.get_by_role("button", name="Entnehmen")).to_have_count(0)
+    expired_card.get_by_role("button", name="Entsorgen").click()
+    expect(page.get_by_role("heading", name="Entsorgen")).to_be_visible()
+    page.get_by_role("button", name=re.compile(r"2 Stück entsorgen")).click()
+    expect(page.get_by_text(re.compile(r"entsorgt\. Neuer Bestand: 1 Stück"))).to_be_visible()
+    step("Abgelaufene Position aus der Haltbarkeitsübersicht entsorgt")
+
+    page.goto(f"{BASE}/haltbarkeit")
+    expect(page.get_by_text("Alle (1)")).to_be_visible()
+    expect(page.get_by_text("Abgelaufen (0)")).to_be_visible()
+    level = next(
+        r for r in api.get(f"{BASE}/api/v1/stock/levels").json() if r["product_name"] == "Testjoghurt"
+    )
+    assert (level["physical_quantity"], level["available_quantity"], level["status"]) == (
+        1,
+        1,
+        "below",
+    ), level
+    step("Übersicht und Bestandsstatus nach dem Entsorgen aktuell")
 
     browser.close()
 

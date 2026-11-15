@@ -1,4 +1,5 @@
 import uuid
+from dataclasses import dataclass
 from decimal import Decimal
 
 from fastapi import APIRouter
@@ -7,7 +8,11 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.api.deps import AdminUser, CurrentUser, DbSession
-from app.modules.settings.models import HouseholdSettings
+from app.modules.settings.models import (
+    DEFAULT_EXPIRY_WARNING_DAYS,
+    DEFAULT_STOCK_WARNING_FACTOR,
+    HouseholdSettings,
+)
 
 
 class SettingsOut(BaseModel):
@@ -35,6 +40,21 @@ def get_settings_for(db: Session, household_id: uuid.UUID) -> HouseholdSettings:
         db.flush()
         settings = db.get(HouseholdSettings, household_id)
     return settings
+
+
+@dataclass(frozen=True)
+class Thresholds:
+    expiry_warning_days: int
+    stock_warning_factor: Decimal
+
+
+def thresholds(db: Session, household_id: uuid.UUID) -> Thresholds:
+    """Warnfrist und Warnfaktor des Haushalts, rein lesend (Standardwerte, solange noch
+    keine Einstellungen gespeichert wurden)."""
+    s = db.get(HouseholdSettings, household_id)
+    if s is None:
+        return Thresholds(DEFAULT_EXPIRY_WARNING_DAYS, DEFAULT_STOCK_WARNING_FACTOR)
+    return Thresholds(s.expiry_warning_days, s.stock_warning_factor)
 
 
 router = APIRouter(prefix="/settings", tags=["Einstellungen"])

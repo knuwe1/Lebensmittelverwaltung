@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.core.units import BaseUnit, NonNegativeQuantity, PositiveQuantity, Quantity
 from app.modules.catalog.schemas import ProductOut
 from app.modules.stock.models import ExpiryType, StockStatus
+from app.modules.stock.status import ExpiryStatus, StockLevelStatus
 
 
 class LineUnit(enum.StrEnum):
@@ -61,6 +62,10 @@ class StockItemOut(BaseModel):
     status: StockStatus
     note: str | None
     version: int
+    # Haltbarkeitsampel (FR-EXP-003) und Tage bis zum Datum (negativ = überschritten)
+    expiry_status: ExpiryStatus
+    days_until_expiry: int | None
+    warning_days: int
 
 
 class StockPage(BaseModel):
@@ -206,3 +211,19 @@ class WeighingPreview(BaseModel):
     open_before: Quantity
     consumption: Quantity
     remaining_total: Quantity
+
+
+class StockLevelOut(BaseModel):
+    """Bestandsstatus eines überwachten Produkts (FR-SHP-003/004, FR-EXP-006)."""
+
+    product_id: uuid.UUID
+    product_name: str
+    product_brand: str | None
+    base_unit: BaseUnit
+    # Physisch vorhanden vs. für den Verbrauch verfügbar (ohne überschrittenes Verbrauchsdatum)
+    physical_quantity: Quantity
+    available_quantity: Quantity
+    minimum_stock: Quantity
+    target_stock: Quantity | None
+    warning_threshold: Quantity
+    status: StockLevelStatus

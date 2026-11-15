@@ -86,6 +86,32 @@ export interface StockItem {
   status: 'available' | 'consumed' | 'disposed';
   note: string | null;
   version: number;
+  /** Haltbarkeitsampel (FR-EXP-003), vom Server mit der gültigen Warnfrist berechnet. */
+  expiry_status: ExpiryStatus;
+  /** Tage bis zum Haltbarkeitsdatum; negativ = überschritten, null = kein Datum. */
+  days_until_expiry: number | null;
+  warning_days: number;
+}
+
+/** ok = grün, expiring = gelb, due/expired = rot, unknown = grau. */
+export type ExpiryStatus = 'ok' | 'expiring' | 'due' | 'expired' | 'unknown';
+
+export type StockLevelStatus = 'ok' | 'near' | 'at_minimum' | 'below';
+
+/** Bestandsstatus eines Produkts mit Mindestbestand (FR-SHP-003/004). */
+export interface StockLevel {
+  product_id: string;
+  product_name: string;
+  product_brand: string | null;
+  base_unit: BaseUnit;
+  /** Physisch vorhanden – inkl. Positionen mit überschrittenem Verbrauchsdatum. */
+  physical_quantity: number;
+  /** Für den Verbrauch verfügbar (FR-EXP-006). */
+  available_quantity: number;
+  minimum_stock: number;
+  target_stock: number | null;
+  warning_threshold: number;
+  status: StockLevelStatus;
 }
 
 export interface ReceiptLine {

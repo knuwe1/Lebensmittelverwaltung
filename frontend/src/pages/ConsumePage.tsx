@@ -25,10 +25,10 @@ import type { BookingResult, ConsumptionPlan, Product, StockItem, WeighingPrevie
 import { ExpiryText } from '../components/ExpiryText';
 import { ProductAvatar } from '../components/ProductAvatar';
 import { ProductSearch } from '../components/ProductSearch';
-import { DISPOSAL_REASONS, formatNumber, formatQuantity, isExpired, unitShort, variantLabel } from '../lib/format';
+import { DISPOSAL_REASONS, formatNumber, formatQuantity, unitShort, variantLabel } from '../lib/format';
 import classes from './ConsumePage.module.css';
 
-type Mode = 'consume' | 'dispose';
+export type Mode = 'consume' | 'dispose';
 const AUTO = 'auto';
 const BASE = '__base__';
 
@@ -184,10 +184,13 @@ function WeighForm({ product, onDone }: { product: Product; onDone: (r: BookingR
 function TakeForm({
   product,
   mode,
+  preferredItemId,
   onDone,
 }: {
   product: Product;
   mode: Mode;
+  /** Vorgewählte Bestandsposition, z. B. aus der Haltbarkeitsübersicht. */
+  preferredItemId?: string;
   onDone: (r: BookingResult) => void;
 }) {
   const variants = product.variants.filter((v) => v.active);
@@ -200,17 +203,20 @@ function TakeForm({
   const [reason, setReason] = useState('expired');
   const { data: stock } = useStock({ product_id: product.id, sort: 'expiry' }, { keepPrevious: false });
   const items = useMemo(() => stock?.items ?? [], [stock]);
-  const [source, setSource] = useState<string>(mode === 'consume' ? AUTO : '');
+  const [source, setSource] = useState<string>(mode === 'consume' ? (preferredItemId ?? AUTO) : '');
 
-  // Entsorgung: standardmäßig die erste abgelaufene bzw. älteste Position
+  // Entsorgung: die vorgewählte, sonst die erste abgelaufene bzw. älteste Position
   useEffect(() => {
     if (mode === 'dispose' && items.length && !items.some((i) => i.id === source)) {
-      const first = items.find((i) => isExpired(i)) ?? items[0];
+      const first =
+        items.find((i) => i.id === preferredItemId) ??
+        items.find((i) => i.expiry_status === 'expired') ??
+        items[0];
       setSource(first.id);
       setVariantId(BASE);
       setQuantity(first.quantity);
     }
-  }, [mode, source, items]);
+  }, [mode, source, items, preferredItemId]);
 
   const baseQty = (Number(quantity) || 0) * (variant ? variant.base_quantity : 1);
   const [debouncedQty] = useDebouncedValue(baseQty, 300);
@@ -361,11 +367,19 @@ function TakeForm({
   );
 }
 
+/** Navigationszustand, mit dem andere Seiten die Entnahme vorbelegen. */
+export interface ConsumeState {
+  product: Product;
+  mode?: Mode;
+  stockItemId?: string;
+}
+
 /** Entnehmen – optimiert für das Smartphone (Spezifikation 9.5). */
 export function ConsumePage() {
   const routerLocation = useRouterLocation();
-  const preselected = (routerLocation.state as { product?: Product } | null)?.product ?? null;
-  const [mode, setMode] = useState<Mode>('consume');
+  const state = routerLocation.state as ConsumeState | null;
+  const preselected = state?.product ?? null;
+  const [mode, setMode] = useState<Mode>(state?.mode ?? 'consume');
   const [product, setProduct] = useState<Product | null>(preselected);
   const [last, setLast] = useState<{ r: BookingResult; mode: Mode } | null>(null);
   const [entry, setEntry] = useState<'weigh' | 'quantity'>('weigh');
@@ -420,6 +434,7 @@ export function ConsumePage() {
           key={`${product.id}-${mode}`}
           product={product}
           mode={mode}
+          preferredItemId={product.id === preselected?.id ? state?.stockItemId : undefined}
           onDone={(r) => {
             setLast({ r, mode });
             setProduct(null);
