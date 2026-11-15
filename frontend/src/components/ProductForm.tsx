@@ -103,6 +103,8 @@ export function ProductForm({ product, initialBarcode, initialName, suggestion, 
     onSuccess: (p) => {
       qc.invalidateQueries({ queryKey: ['products'] });
       qc.setQueryData(['product', p.id], p);
+      // Mindestbestand und Warnfrist beeinflussen Bestands- und Haltbarkeitsstatus
+      qc.invalidateQueries({ queryKey: ['stock'] });
       notifications.show({ color: 'green', message: `„${p.name}“ gespeichert.` });
       onSaved(p);
     },

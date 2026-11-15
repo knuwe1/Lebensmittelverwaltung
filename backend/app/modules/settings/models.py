@@ -6,6 +6,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, Timestamps
 
+DEFAULT_EXPIRY_WARNING_DAYS = 7  # DEC-017
+DEFAULT_STOCK_WARNING_FACTOR = Decimal("1.25")  # DEC-016
+
 
 class HouseholdSettings(Timestamps, Base):
     """Administrativ konfigurierbare Einstellungen eines Haushalts (Spez. 9.2 „Einstellungen“)."""
@@ -26,9 +29,15 @@ class HouseholdSettings(Timestamps, Base):
     )
     # Haltbarkeitswarnung in Tagen (FR-EXP-002, DEC-017)
     expiry_warning_days: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=7, server_default=text("7")
+        Integer,
+        nullable=False,
+        default=DEFAULT_EXPIRY_WARNING_DAYS,
+        server_default=text(str(DEFAULT_EXPIRY_WARNING_DAYS)),
     )
     # Warnbereich = Mindestbestand × Faktor (FR-SHP-004, DEC-016)
     stock_warning_factor: Mapped[Decimal] = mapped_column(
-        Numeric(4, 2), nullable=False, default=Decimal("1.25"), server_default=text("1.25")
+        Numeric(4, 2),
+        nullable=False,
+        default=DEFAULT_STOCK_WARNING_FACTOR,
+        server_default=text(str(DEFAULT_STOCK_WARNING_FACTOR)),
     )

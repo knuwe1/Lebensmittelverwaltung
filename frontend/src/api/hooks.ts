@@ -1,6 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from './client';
-import type { Category, HouseholdSettings, Location, Page, Product, StockItem } from './types';
+import type {
+  Category,
+  ExpiryStatus,
+  HouseholdSettings,
+  Location,
+  Page,
+  Product,
+  StockItem,
+  StockLevel,
+  StockLevelStatus,
+} from './types';
 
 export const queryKeys = {
   categories: ['categories'] as const,
@@ -8,6 +18,9 @@ export const queryKeys = {
   products: (params: object) => ['products', params] as const,
   product: (id: string) => ['product', id] as const,
   stock: (params: object) => ['stock', params] as const,
+  // Unter dem Präfix 'stock', damit Buchungen auch diese Abfragen auffrischen
+  expiring: (params: object) => ['stock', 'expiring', params] as const,
+  levels: (status: readonly string[]) => ['stock', 'levels', status] as const,
 };
 
 export function useCategories() {
@@ -83,5 +96,29 @@ export function useHouseholdSettings() {
     queryKey: ['settings'],
     queryFn: () => api.get<HouseholdSettings>('/settings'),
     staleTime: 5 * 60_000,
+  });
+}
+
+export interface ExpiringQuery {
+  location_id?: string | null;
+  status?: ExpiryStatus[];
+  sort?: 'expiry' | 'product' | 'location';
+}
+
+/** Gefährdete Lebensmittel: bald, heute oder bereits abgelaufen (FR-EXP-004). */
+export function useExpiring(params: ExpiringQuery = {}) {
+  return useQuery({
+    queryKey: queryKeys.expiring(params),
+    queryFn: ({ signal }) => api.get<Page<StockItem>>('/stock/expiring', { ...params }, signal),
+    placeholderData: (prev) => prev,
+  });
+}
+
+/** Bestandsstatus der Produkte mit Mindestbestand, dringendste zuerst (FR-SHP-003/004). */
+export function useStockLevels(status: StockLevelStatus[] = []) {
+  return useQuery({
+    queryKey: queryKeys.levels(status),
+    queryFn: ({ signal }) =>
+      api.get<StockLevel[]>('/stock/levels', status.length ? { status } : {}, signal),
   });
 }

@@ -19,6 +19,8 @@ export function SystemSettings() {
     mutationFn: (body: Partial<HouseholdSettings>) => api.patch<HouseholdSettings>('/settings', body),
     onSuccess: (s) => {
       qc.setQueryData(['settings'], s);
+      // Warnfrist und Warnfaktor ändern die Ampeln aller Bestände
+      qc.invalidateQueries({ queryKey: ['stock'] });
       notifications.show({ color: 'green', message: 'Einstellungen gespeichert.' });
     },
     onError: (e) => notifications.show({ color: 'red', message: errorMessage(e) }),

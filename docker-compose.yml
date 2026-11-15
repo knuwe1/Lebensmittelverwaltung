@@ -32,6 +32,8 @@ services:
       LMV_BOOTSTRAP_ADMIN_PASSWORD: ${LMV_BOOTSTRAP_ADMIN_PASSWORD:-}
       LMV_BOOTSTRAP_HOUSEHOLD_NAME: ${LMV_BOOTSTRAP_HOUSEHOLD_NAME:-Mein Haushalt}
       LMV_LOG_LEVEL: ${LMV_LOG_LEVEL:-INFO}
+      # „Heute“ für Haltbarkeitsampel und FEFO nach Ortszeit, nicht UTC
+      TZ: ${TZ:-Europe/Berlin}
     volumes:
       - media:/data/media
     depends_on:

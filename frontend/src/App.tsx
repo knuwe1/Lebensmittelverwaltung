@@ -5,6 +5,7 @@ import { useAuth } from './auth/AuthContext';
 import { AppLayout } from './layout/AppLayout';
 import { ConsumePage } from './pages/ConsumePage';
 import { DashboardPage } from './pages/DashboardPage';
+import { ExpiryPage } from './pages/ExpiryPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { LocationsPage } from './pages/LocationsPage';
 import { LoginPage } from './pages/LoginPage';
@@ -52,6 +53,7 @@ export function App() {
         <Route path="einlagern" element={<ReceivePage />} />
         <Route path="entnehmen" element={<ConsumePage />} />
         <Route path="vorraete" element={<StockPage />} />
+        <Route path="haltbarkeit" element={<ExpiryPage />} />
         <Route path="historie" element={<HistoryPage />} />
         <Route path="lebensmittel" element={<ProductsPage />} />
         <Route path="lebensmittel/:id" element={<ProductDetailPage />} />

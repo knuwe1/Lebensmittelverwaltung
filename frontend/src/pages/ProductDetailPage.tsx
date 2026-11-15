@@ -23,7 +23,7 @@ import { IconArrowsTransferUp, IconCamera, IconEdit, IconPackageExport, IconPack
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, errorMessage } from '../api/client';
-import { useLocations, useProduct, useStock } from '../api/hooks';
+import { useLocations, useProduct, useStock, useStockLevels } from '../api/hooks';
 import type { Product, StockItem, Variant } from '../api/types';
 import { useUser } from '../auth/AuthContext';
 import { ProductAvatar } from '../components/ProductAvatar';
@@ -31,6 +31,7 @@ import { ProductForm } from '../components/ProductForm';
 import { COMPATIBLE_PACKAGE_UNITS, formatNumber, formatQuantity, PACKAGE_UNIT_LABELS, unitShort, variantLabel } from '../lib/format';
 import { ExpiryText } from '../components/ExpiryText';
 import { TransferDialog } from '../components/TransferDialog';
+import { StockLevelBadge } from '../components/StockLevelBadge';
 
 function VariantForm({ product, onDone }: { product: Product; onDone: () => void }) {
   const qc = useQueryClient();
@@ -108,6 +109,7 @@ export function ProductDetailPage() {
   const { data: product, isLoading } = useProduct(id);
   const { data: stock } = useStock({ product_id: id, sort: 'expiry' }, { keepPrevious: false });
   const { data: locations = [] } = useLocations();
+  const { data: levels } = useStockLevels();
   const [editOpen, edit] = useDisclosure();
   const [variantOpen, variantModal] = useDisclosure();
   const [transferItem, setTransferItem] = useState<StockItem | null>(null);
@@ -117,6 +119,7 @@ export function ProductDetailPage() {
     if (p) qc.setQueryData(['product', p.id], p);
     qc.invalidateQueries({ queryKey: ['product', id] });
     qc.invalidateQueries({ queryKey: ['products'] });
+    qc.invalidateQueries({ queryKey: ['stock'] });
   };
 
   const upload = useMutation({
@@ -153,6 +156,7 @@ export function ProductDetailPage() {
   if (isLoading || !product) return <Loader mx="auto" />;
   const locationName = locations.find((l) => l.id === product.default_location_id)?.path;
   const u = unitShort(product.base_unit);
+  const level = levels?.find((l) => l.product_id === product.id);
 
   return (
     <Stack>
@@ -198,7 +202,10 @@ export function ProductDetailPage() {
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
           <Text size="sm">Basiseinheit: <b>{u}</b></Text>
           <Text size="sm">Standardlagerplatz: <b>{locationName ?? '–'}</b></Text>
-          <Text size="sm">Mindestbestand: <b>{product.minimum_stock != null ? `${formatNumber(product.minimum_stock)} ${u}` : 'keine Überwachung'}</b></Text>
+          <Group gap="xs">
+            <Text size="sm">Mindestbestand: <b>{product.minimum_stock != null ? `${formatNumber(product.minimum_stock)} ${u}` : 'keine Überwachung'}</b></Text>
+            {level && <StockLevelBadge status={level.status} size="xs" />}
+          </Group>
           <Text size="sm">Zielbestand: <b>{product.target_stock != null ? `${formatNumber(product.target_stock)} ${u}` : '–'}</b></Text>
           <Text size="sm">Standardhaltbarkeit: <b>{product.default_shelf_life_days != null ? `${product.default_shelf_life_days} Tage` : '–'}</b></Text>
           <Text size="sm">Restmenge per Waage: <b>{product.weigh_remaining ? 'ja' : 'nein'}</b></Text>

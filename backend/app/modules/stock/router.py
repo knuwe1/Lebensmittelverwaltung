@@ -1,5 +1,5 @@
 import uuid
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Header, Query
 
@@ -20,11 +20,13 @@ from app.modules.stock.schemas import (
     ReceiptDefaults,
     ReceiptResult,
     ReversalCreate,
+    StockLevelOut,
     StockPage,
     TransferCreate,
     WeighingCreate,
     WeighingPreview,
 )
+from app.modules.stock.status import ExpiryStatus, StockLevelStatus
 
 router = APIRouter(prefix="/stock", tags=["Bestand"])
 
@@ -61,6 +63,40 @@ def list_stock(
         offset=offset,
     )
     return StockPage(items=items, total=total)
+
+
+@router.get("/expiring", response_model=StockPage)
+def expiring_stock(
+    db: DbSession,
+    user: CurrentUser,
+    location_id: uuid.UUID | None = None,
+    include_sublocations: bool = True,
+    status: Annotated[list[ExpiryStatus] | None, Query()] = None,
+    sort: Literal["expiry", "product", "location"] = "expiry",
+):
+    """Gefährdete Lebensmittel (FR-EXP-004): Haltbarkeitsdatum innerhalb der Warnfrist,
+    heute erreicht oder überschritten. Mit `status` lässt sich auf einzelne Stufen
+    (`expiring`, `due`, `expired`) einschränken."""
+    items = service.expiry_overview(
+        db,
+        user.household_id,
+        location_id=location_id,
+        include_sublocations=include_sublocations,
+        statuses=status or service.ATTENTION_STATUSES,
+        sort=sort,
+    )
+    return StockPage(items=items, total=len(items))
+
+
+@router.get("/levels", response_model=list[StockLevelOut])
+def stock_levels(
+    db: DbSession,
+    user: CurrentUser,
+    status: Annotated[list[StockLevelStatus] | None, Query()] = None,
+):
+    """Bestandsstatus aller Produkte mit Mindestbestand, dringendste zuerst
+    (FR-SHP-003/004). Ohne `status` werden alle überwachten Produkte geliefert."""
+    return service.stock_levels(db, user.household_id, status)
 
 
 @router.get("/receipt-defaults", response_model=ReceiptDefaults)

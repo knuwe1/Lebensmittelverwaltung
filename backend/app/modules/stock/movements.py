@@ -35,7 +35,13 @@ from app.modules.stock.schemas import (
     WeighingCreate,
     WeighingPreview,
 )
-from app.modules.stock.service import _record, item_out, location_paths, lock_product
+from app.modules.stock.service import (
+    _record,
+    item_context,
+    item_out,
+    location_paths,
+    lock_product,
+)
 from app.modules.stock.weighing import compute_weighing
 from app.modules.users.models import User
 
@@ -83,10 +89,10 @@ def consumption_plan(
     plan = plan_consumption(
         _available_items(db, user, product.id, location_id), requested, date.today()
     )
-    paths = location_paths(db, user.household_id)
+    ctx = item_context(db, user.household_id)
     return ConsumptionPlan(
         allocations=[
-            PlannedAllocation(stock_item=item_out(a.position, paths), quantity=a.quantity)
+            PlannedAllocation(stock_item=item_out(a.position, ctx), quantity=a.quantity)
             for a in plan.allocations
         ],
         requested=requested,
@@ -160,11 +166,11 @@ def _take(
         touched.append(item)
         total += qty
     db.flush()
-    paths = location_paths(db, user.household_id)
+    ctx = item_context(db, user.household_id)
     return BookingResult(
         transaction_id=transaction_id,
         product=catalog.product_out(db, product),
-        stock_items=[item_out(i, paths) for i in touched],
+        stock_items=[item_out(i, ctx) for i in touched],
         quantity=total,
     )
 
@@ -290,12 +296,12 @@ def book_transfer(db: Session, user: User, data: TransferCreate) -> BookingResul
     _record(db, user, target, movement_type=MovementType.TRANSFER_IN, quantity_delta=qty, **common)
     db.flush()
 
-    paths = location_paths(db, user.household_id)
+    ctx = item_context(db, user.household_id)
     items = [source] if source is target else [source, target]
     return BookingResult(
         transaction_id=transaction_id,
         product=catalog.product_out(db, product),
-        stock_items=[item_out(i, paths) for i in items],
+        stock_items=[item_out(i, ctx) for i in items],
         quantity=qty,
     )
 
@@ -391,11 +397,11 @@ def reverse_transaction(
     db.flush()
 
     product = catalog.get_product(db, user.household_id, movements[0].product_id)
-    paths = location_paths(db, user.household_id)
+    ctx = item_context(db, user.household_id)
     return BookingResult(
         transaction_id=reversal_id,
         product=catalog.product_out(db, product),
-        stock_items=[item_out(i, paths) for i in touched.values()],
+        stock_items=[item_out(i, ctx) for i in touched.values()],
         quantity=sum((abs(m.quantity_delta) for m in movements), Decimal(0)),
     )
 
