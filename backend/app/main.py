@@ -7,10 +7,12 @@ from sqlalchemy import text
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.db.session import SessionLocal
+from app.integrations.router import router as product_data_router
 from app.modules.auth.router import router as auth_router
 from app.modules.catalog.router import categories as categories_router
 from app.modules.catalog.router import products as products_router
 from app.modules.locations.router import router as locations_router
+from app.modules.settings.service import router as settings_router
 from app.modules.stock.router import router as stock_router
 from app.modules.users import service as user_service
 from app.modules.users.router import router as users_router
@@ -66,6 +68,8 @@ def create_app() -> FastAPI:
     api.include_router(products_router)
     api.include_router(locations_router)
     api.include_router(stock_router)
+    api.include_router(settings_router)
+    api.include_router(product_data_router)
     app.include_router(api)
     return app
 

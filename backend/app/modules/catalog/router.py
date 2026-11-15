@@ -1,11 +1,18 @@
+import logging
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
 from fastapi.responses import FileResponse
 
 from app.api.deps import AdminUser, CurrentUser, DbSession
 from app.core import images
-from app.core.errors import NotFoundError
+from app.core.errors import DomainError, NotFoundError
+from app.integrations.product_data import (
+    ExternalServiceError,
+    ProductDataSource,
+    get_product_data_source,
+)
 from app.modules.catalog import service
 from app.modules.catalog.schemas import (
     BarcodeLookup,
@@ -20,7 +27,9 @@ from app.modules.catalog.schemas import (
     VariantOut,
     VariantUpdate,
 )
+from app.modules.settings.service import get_settings_for
 
+log = logging.getLogger(__name__)
 categories = APIRouter(prefix="/categories", tags=["Produktgruppen"])
 products = APIRouter(prefix="/products", tags=["Lebensmittel"])
 
@@ -92,11 +101,29 @@ def search_products(
 
 
 @products.post("", response_model=ProductOut, status_code=status.HTTP_201_CREATED)
-def create_product(data: ProductCreate, db: DbSession, user: CurrentUser):
+def create_product(
+    data: ProductCreate,
+    db: DbSession,
+    user: CurrentUser,
+    source: Annotated[ProductDataSource, Depends(get_product_data_source)],
+):
     """Legt ein Produkt an. Alle Benutzer dürfen unbekannte Lebensmittel erfassen (Spez. 3.1);
-    Mindest- und Zielbestände dürfen nur Administratoren festlegen."""
+    Mindest- und Zielbestände dürfen nur Administratoren festlegen.
+
+    Mit `external_image_url` wird das Bild aus der externen Produktdatenquelle übernommen
+    (nur wenn die Integration aktiviert ist; ein Fehler beim Bild verhindert die Anlage nicht).
+    """
     product = service.create_product(db, user, data)
     db.commit()
+    if data.external_image_url and get_settings_for(db, user.household_id).external_product_data:
+        try:
+            raw = source.fetch_image(data.external_image_url)
+            product.image_path = images.save_image(raw, "products")
+            product.image_source = f"{source.name} ({source.license})"
+            db.commit()
+        except (ExternalServiceError, DomainError) as exc:
+            log.warning("Produktbild konnte nicht übernommen werden: %s", exc)
+            db.rollback()
     return service.product_out(db, product)
 
 

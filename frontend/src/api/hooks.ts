@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from './client';
-import type { Category, Location, Page, Product, StockItem } from './types';
+import type { Category, HouseholdSettings, Location, Page, Product, StockItem } from './types';
 
 export const queryKeys = {
   categories: ['categories'] as const,
@@ -76,4 +76,12 @@ export function useStock(params: StockQuery, { keepPrevious = true } = {}) {
 
 export function productImageUrl(p: Pick<Product, 'id' | 'has_image' | 'updated_at'>) {
   return p.has_image ? `/api/v1/products/${p.id}/image?v=${encodeURIComponent(p.updated_at)}` : null;
+}
+
+export function useHouseholdSettings() {
+  return useQuery({
+    queryKey: ['settings'],
+    queryFn: () => api.get<HouseholdSettings>('/settings'),
+    staleTime: 5 * 60_000,
+  });
 }

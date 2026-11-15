@@ -18,7 +18,7 @@ import { IconArrowLeft, IconCheck, IconPlus, IconTrash } from '@tabler/icons-rea
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation as useRouterLocation } from 'react-router-dom';
 import { api, errorMessage, newIdempotencyKey } from '../api/client';
-import type { ExpiryType, Product, ReceiptDefaults, ReceiptResult } from '../api/types';
+import type { ExpiryType, Product, ProductPrefill, ReceiptDefaults, ReceiptResult } from '../api/types';
 import { GermanDateInput } from '../components/GermanDateInput';
 import { ProductAvatar } from '../components/ProductAvatar';
 import { ProductForm } from '../components/ProductForm';
@@ -235,7 +235,7 @@ function ReceiptForm({
 
 type Step =
   | { kind: 'search' }
-  | { kind: 'create'; name?: string; barcode?: string }
+  | ({ kind: 'create' } & ProductPrefill)
   | { kind: 'book'; product: Product; variantId?: string };
 
 /** Einlagern – optimiert für das Smartphone (Spezifikation 9.4, DEC-026). */
@@ -270,6 +270,7 @@ export function ReceivePage() {
             compact
             initialName={step.name}
             initialBarcode={step.barcode}
+            suggestion={step.suggestion}
             onSaved={(p) => select(p, p.variants.find((v) => v.is_default)?.id)}
             onCancel={() => setStep({ kind: 'search' })}
           />

@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import {
+  Alert,
   Button,
+  Checkbox,
   Group,
+  Image,
   NumberInput,
   SegmentedControl,
   Select,
@@ -15,7 +18,7 @@ import {
 import { notifications } from '@mantine/notifications';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, errorMessage } from '../api/client';
-import type { BaseUnit, Product } from '../api/types';
+import type { BaseUnit, Product, ProductSuggestion } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { COMPATIBLE_PACKAGE_UNITS, PACKAGE_UNIT_LABELS, UNIT_LABELS } from '../lib/format';
 import { CategorySelect, LocationSelect } from './selects';
@@ -27,22 +30,25 @@ interface Props {
   /** Bei Neuanlage: Barcode aus einem Scan übernehmen (AC-002) */
   initialBarcode?: string;
   initialName?: string;
+  /** Vorschlag aus externer Produktdatenquelle – wird zur Prüfung vorbelegt (FR-PRD-003) */
+  suggestion?: ProductSuggestion;
   onSaved: (p: Product) => void;
   onCancel?: () => void;
   compact?: boolean;
 }
 
 /** Anlage und Bearbeitung von Lebensmittelstammdaten (FR-PRD-001, FR-PRD-006). */
-export function ProductForm({ product, initialBarcode, initialName, onSaved, onCancel, compact }: Props) {
+export function ProductForm({ product, initialBarcode, initialName, suggestion, onSaved, onCancel, compact }: Props) {
   const isNew = !product;
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const qc = useQueryClient();
 
-  const [name, setName] = useState(product?.name ?? initialName ?? '');
-  const [brand, setBrand] = useState(product?.brand ?? '');
-  const [categoryId, setCategoryId] = useState<string | null>(product?.category_id ?? null);
-  const [baseUnit, setBaseUnit] = useState<BaseUnit>(product?.base_unit ?? 'piece');
+  const [name, setName] = useState(product?.name ?? suggestion?.name ?? initialName ?? '');
+  const [brand, setBrand] = useState(product?.brand ?? suggestion?.brand ?? '');
+  const [categoryId, setCategoryId] = useState<string | null>(product?.category_id ?? suggestion?.category_id ?? null);
+  const [baseUnit, setBaseUnit] = useState<BaseUnit>(product?.base_unit ?? suggestion?.base_unit ?? 'piece');
+  const [useImage, setUseImage] = useState(!!suggestion?.image_url);
   const [locationId, setLocationId] = useState<string | null>(product?.default_location_id ?? null);
   const [shelfLife, setShelfLife] = useState<string | number>(product?.default_shelf_life_days ?? '');
   const [warnDays, setWarnDays] = useState<string | number>(product?.expiry_warning_days ?? '');
@@ -52,9 +58,11 @@ export function ProductForm({ product, initialBarcode, initialName, onSaved, onC
   const [weigh, setWeigh] = useState(product?.weigh_remaining ?? false);
   const [tare, setTare] = useState<string | number>('');
   // Erste Verpackungsvariante bei Neuanlage
-  const [pkgQty, setPkgQty] = useState<string | number>('');
-  const [pkgUnit, setPkgUnit] = useState<string>('piece');
-  const [barcode, setBarcode] = useState(initialBarcode ?? '');
+  const [pkgQty, setPkgQty] = useState<string | number>(
+    suggestion?.package_quantity != null ? Number(suggestion.package_quantity) : '',
+  );
+  const [pkgUnit, setPkgUnit] = useState<string>(suggestion?.package_unit ?? suggestion?.base_unit ?? 'piece');
+  const [barcode, setBarcode] = useState(suggestion?.barcode ?? initialBarcode ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const mutation = useMutation({
@@ -84,7 +92,11 @@ export function ProductForm({ product, initialBarcode, initialName, onSaved, onC
                 },
               ]
             : [];
-        return api.post<Product>('/products', { ...common, variants });
+        return api.post<Product>('/products', {
+          ...common,
+          variants,
+          external_image_url: useImage ? (suggestion?.image_url ?? null) : null,
+        });
       }
       return api.patch<Product>(`/products/${product.id}`, common);
     },
@@ -107,6 +119,30 @@ export function ProductForm({ product, initialBarcode, initialName, onSaved, onC
 
   return (
     <Stack gap="sm">
+      {suggestion && (
+        <Alert color="blue" variant="light" p="xs">
+          <Group wrap="nowrap" align="flex-start" gap="sm">
+            {suggestion.image_url && (
+              <Image
+                src={`/api/v1/product-data/image?url=${encodeURIComponent(suggestion.image_url)}`}
+                w={56}
+                h={56}
+                fit="contain"
+                radius="sm"
+                alt=""
+              />
+            )}
+            <Stack gap={4}>
+              <Text size="sm">
+                Vorschlag von {suggestion.source} – bitte prüfen und bei Bedarf korrigieren. ({suggestion.license})
+              </Text>
+              {suggestion.image_url && (
+                <Checkbox size="xs" label="Produktbild übernehmen" checked={useImage} onChange={(e) => setUseImage(e.currentTarget.checked)} />
+              )}
+            </Stack>
+          </Group>
+        </Alert>
+      )}
       <TextInput label="Bezeichnung" required value={name} onChange={(e) => setName(e.currentTarget.value)} error={errors.name} data-autofocus />
       <SimpleGrid cols={{ base: 1, sm: 2 }}>
         <CategorySelect required value={categoryId} onChange={setCategoryId} error={errors.category_id} />

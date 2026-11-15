@@ -287,7 +287,7 @@ def create_product(db: Session, user: User, data: ProductCreate) -> Product:
     _check_weigh_remaining(data.weigh_remaining, data.base_unit)
     product = Product(
         household_id=user.household_id,
-        **data.model_dump(exclude={"variants"}),
+        **data.model_dump(exclude={"variants", "external_image_url"}),
     )
     db.add(product)
     seen = set()

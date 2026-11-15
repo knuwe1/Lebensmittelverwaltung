@@ -21,6 +21,7 @@ import { api, errorMessage } from '../api/client';
 import type { Role, User } from '../api/types';
 import { useUser } from '../auth/AuthContext';
 import { CategoriesAdmin } from './CategoriesAdmin';
+import { SystemSettings } from './SystemSettings';
 
 function PasswordForm() {
   const [current, setCurrent] = useState('');
@@ -186,6 +187,7 @@ export function SettingsPage() {
           <Tabs.Tab value="konto">Mein Konto</Tabs.Tab>
           {user.role === 'admin' && <Tabs.Tab value="benutzer">Benutzer</Tabs.Tab>}
           {user.role === 'admin' && <Tabs.Tab value="gruppen">Produktgruppen</Tabs.Tab>}
+          {user.role === 'admin' && <Tabs.Tab value="system">System</Tabs.Tab>}
         </Tabs.List>
         <Tabs.Panel value="konto" pt="md">
           <PasswordForm />
@@ -198,6 +200,11 @@ export function SettingsPage() {
         {user.role === 'admin' && (
           <Tabs.Panel value="gruppen" pt="md">
             <CategoriesAdmin />
+          </Tabs.Panel>
+        )}
+        {user.role === 'admin' && (
+          <Tabs.Panel value="system" pt="md">
+            <SystemSettings />
           </Tabs.Panel>
         )}
       </Tabs>

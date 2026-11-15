@@ -74,6 +74,14 @@ Portfreigabe im Router. Das Zertifikat ist ein reguläres Let's-Encrypt-Zertifik
   Ports 80/443 müssen aus dem Internet erreichbar sein. Für eine Haushaltsanwendung
   nur mit zusätzlicher Absicherung zu empfehlen.
 
+## Externe Produktdaten (Open Food Facts)
+
+Standardmäßig **aus**. Ein Administrator kann sie unter *Einstellungen → System*
+einschalten. Dann wird bei einem unbekannten Barcode ausschließlich die Barcode-Nummer
+vom Server (nicht vom Handy) an `world.openfoodfacts.org` gesendet; Bilder werden über
+den eigenen Server geladen und neu kodiert. Der Server benötigt dafür ausgehenden
+Internetzugang. Alternativer Endpunkt (z. B. Spiegel): `LMV_OFF_BASE_URL`.
+
 ## Datensicherung
 
 Der Container `backup` sichert täglich um `LMV_BACKUP_TIME` (Standard 03:00):
