@@ -15,4 +15,6 @@ Getroffene Entscheidungen: [docs/ENTSCHEIDUNGEN.md](docs/ENTSCHEIDUNGEN.md)
 
 ## Status
 
-In Entwicklung (MVP). Der Umsetzungsstand je Phase ist in den Pull Requests nach `dev` dokumentiert.
+MVP vollständig umgesetzt (Phasen 1–6, Fotoerkennung zurückgestellt). Prüfungen vor der
+Produktivsetzung – Wiederherstellungstest, Sicherheitsprüfung, End-to-End-Tests – und noch
+offene Punkte: [docs/PRODUKTIVSETZUNG.md](docs/PRODUKTIVSETZUNG.md).

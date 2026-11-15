@@ -47,3 +47,21 @@ def test_password_change_invalidates_other_sessions(app, admin_client):
 def test_logout(admin_client):
     admin_client.post("/api/v1/auth/logout")
     assert admin_client.get("/api/v1/auth/me").status_code == 401
+
+
+def test_api_docs_can_be_disabled(monkeypatch):
+    """Befund Sicherheitsprüfung: In der Installation ist das API-Schema nicht öffentlich."""
+    from fastapi.testclient import TestClient
+
+    from app.core.config import get_settings
+    from app.main import create_app
+
+    monkeypatch.setenv("LMV_API_DOCS", "false")
+    get_settings.cache_clear()
+    try:
+        client = TestClient(create_app())
+        assert client.get("/api/v1/openapi.json").status_code == 404
+        assert client.get("/api/v1/docs").status_code == 404
+    finally:
+        monkeypatch.delenv("LMV_API_DOCS")
+        get_settings.cache_clear()

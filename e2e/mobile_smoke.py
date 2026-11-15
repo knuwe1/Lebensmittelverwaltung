@@ -353,6 +353,45 @@ def main(pw):
     page.screenshot(path=f"{OUT}/11-inventur-protokoll.png", full_page=True)
     step("Inventur abgeschlossen: Korrektur gebucht, Protokoll vorhanden")
 
+    # Spez. 15.4 Nr. 2: unbekanntes Produkt über die Oberfläche anlegen und einlagern
+    page.goto(f"{BASE}/einlagern")
+    page.get_by_placeholder("Produktname oder Barcode").fill("Testapfelmus")
+    page.get_by_role("button", name="„Testapfelmus“ als neues Lebensmittel anlegen").click()
+    expect(page.get_by_label("Bezeichnung")).to_have_value("Testapfelmus")
+    page.get_by_role("textbox", name="Produktgruppe").click()
+    page.get_by_role("option", name="Obst").click()
+    page.get_by_role("button", name="Anlegen").click()
+    page.get_by_label("Menge (Stück)").fill("4")
+    page.get_by_label("Mindestens haltbar bis (MHD)").fill("01.06.2028")
+    page.keyboard.press("Escape")
+    page.get_by_role("textbox", name="Lagerplatz").click()
+    page.get_by_role("option", name="Vorratsraum").click()
+    page.get_by_role("button", name=re.compile(r"4 Stück einlagern")).click()
+    expect(page.get_by_text(re.compile(r"eingelagert\. Neuer Bestand: 4 Stück"))).to_be_visible()
+    step("Unbekanntes Produkt angelegt und eingelagert")
+
+    # Spez. 15.4 Nr. 10: Buchung schlägt fehl, weil zwischenzeitlich gebucht wurde –
+    # der Bestand bleibt konsistent, ein erneuter Versuch gelingt.
+    apfelmus = api.get(f"{BASE}/api/v1/products?q=Testapfelmus").json()["items"][0]
+    page.goto(f"{BASE}/entnehmen")
+    page.get_by_placeholder("Produktname oder Barcode").fill("Testapfelmus")
+    page.locator("button", has_text="Obst").first.click()
+    take = page.get_by_role("button", name=re.compile(r"1 Stück entnehmen"))
+    expect(take).to_be_enabled()
+    api.post(
+        f"{BASE}/api/v1/stock/consumptions",
+        data={"product_id": apfelmus["id"], "quantity": 1},
+        headers={"Idempotency-Key": str(uuid.uuid4())},
+    )
+    take.click()
+    expect(page.get_by_text("Nicht gebucht")).to_be_visible()
+    stock_now = api.get(f"{BASE}/api/v1/products/{apfelmus['id']}").json()["stock_quantity"]
+    assert stock_now == 3, stock_now  # nur die andere Buchung, keine doppelte oder halbe
+    expect(take).to_be_enabled()
+    take.click()
+    expect(page.get_by_text(re.compile(r"entnommen\. Neuer Bestand: 2 Stück"))).to_be_visible()
+    step("Fehlgeschlagene Buchung ohne inkonsistenten Bestand, erneuter Versuch erfolgreich")
+
     browser.close()
 
 
@@ -360,8 +399,9 @@ with sync_playwright() as playwright:
     main(playwright)
 
 # Service Worker lässt sich mit dem lokalen Testzertifikat nicht registrieren (erwartet);
-# 401 ist die Anmeldeprüfung vor dem Login.
-IGNORED = ("favicon", "ServiceWorker", "SSL certificate error", "status of 401")
+# 401 ist die Anmeldeprüfung vor dem Login; 409 ist die im Test absichtlich provozierte
+# Ablehnung einer veralteten Buchung (Spez. 15.4 Nr. 10).
+IGNORED = ("favicon", "ServiceWorker", "SSL certificate error", "status of 401", "status of 409")
 relevant = [e for e in errors if not any(i in e for i in IGNORED)]
 if relevant:
     print("Fehler im Browser:\n" + "\n".join(relevant))

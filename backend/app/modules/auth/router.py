@@ -1,10 +1,13 @@
+import math
+
 from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
 from app.api.deps import CurrentUser, DbSession
 from app.core.config import get_settings
-from app.core.errors import AuthenticationError
+from app.core.errors import AuthenticationError, TooManyAttempts
+from app.core.login_throttle import login_throttle
 from app.core.security import create_access_token, hash_password, verify_password
 from app.modules.users.models import User
 from app.modules.users.schemas import PasswordChange, UserOut
@@ -35,10 +38,21 @@ def _set_cookie(response: Response, token: str) -> None:
 
 @router.post("/login", response_model=UserOut)
 def login(data: LoginRequest, response: Response, db: DbSession):
+    """Anmeldung. Nach mehreren Fehlversuchen für denselben Benutzernamen → 429
+    `too_many_attempts` mit `Retry-After` (Schutz gegen Durchprobieren von Passwörtern)."""
+    wait = login_throttle.wait_seconds(data.username)
+    if wait > 0:
+        seconds = math.ceil(wait)
+        raise TooManyAttempts(
+            f"Zu viele Fehlversuche. Bitte in {seconds} Sekunden erneut versuchen.",
+            details={"retry_after": seconds},
+        )
     user = db.scalar(select(User).where(func.lower(User.username) == data.username.lower()))
     valid = verify_password(data.password, user.password_hash if user else _DUMMY_HASH)
     if not user or not valid or not user.active:
+        login_throttle.failure(data.username)
         raise AuthenticationError("Benutzername oder Passwort ist falsch.", code="invalid_login")
+    login_throttle.success(data.username)
     _set_cookie(response, create_access_token(user.id, user.token_version))
     return user
 

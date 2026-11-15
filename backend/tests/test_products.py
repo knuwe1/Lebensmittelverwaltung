@@ -177,3 +177,26 @@ def test_image_upload_is_reencoded(member_client):
     )
     assert r.status_code == 422
     assert r.json()["error"]["code"] == "invalid_image"
+
+
+def test_decompression_bomb_is_rejected_before_decoding(member_client):
+    """Kleine Datei, riesige Pixelzahl (Befund Sicherheitsprüfung): Ablehnung ohne Dekodieren."""
+    bomb = io.BytesIO()
+    Image.new("1", (8000, 8000)).save(bomb, "PNG")  # 64 MP, nur wenige KB groß
+    assert len(bomb.getvalue()) < 100_000
+    p = make_product(member_client)
+    r = member_client.put(
+        f"/api/v1/products/{p['id']}/image", files={"file": ("x.png", bomb.getvalue(), "image/png")}
+    )
+    assert r.status_code == 422 and r.json()["error"]["code"] == "image_too_large"
+
+
+def test_large_jpeg_photo_is_accepted(member_client):
+    """Ein normales 12-MP-Handyfoto bleibt erlaubt."""
+    buf = io.BytesIO()
+    Image.new("RGB", (4000, 3000), (10, 120, 40)).save(buf, "JPEG", quality=80)
+    p = make_product(member_client)
+    r = member_client.put(
+        f"/api/v1/products/{p['id']}/image", files={"file": ("x.jpg", buf.getvalue(), "image/jpeg")}
+    )
+    assert ok(r)["has_image"] is True
