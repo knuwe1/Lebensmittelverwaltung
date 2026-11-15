@@ -13,10 +13,13 @@ findet aber Fehler, die Typecheck und API-Tests nicht sehen.
 ## Ausführen
 
 Benötigt nur Docker. Der Test braucht einen **leeren** Stack, daher ein eigenes
-Compose-Projekt mit eigenen Ports:
+Compose-Projekt mit eigenen Ports und **eigenem Image-Tag** (`LMV_VERSION=e2e`). Ohne den
+Tag würde `--build` die lokalen `latest`-Images überschreiben, und eine Installation auf
+demselben Rechner übernähme beim nächsten Neustart unbemerkt den Teststand.
 
 ```bash
 cat > /tmp/lmv-e2e.env <<EOF
+LMV_VERSION=e2e
 POSTGRES_PASSWORD=e2etest123
 LMV_SECRET_KEY=$(openssl rand -hex 32)
 LMV_BOOTSTRAP_ADMIN_USERNAME=admin

@@ -84,7 +84,9 @@ Internetzugang. Alternativer Endpunkt (z. B. Spiegel): `LMV_OFF_BASE_URL`.
 
 ## Datensicherung
 
-Der Container `backup` sichert täglich um `LMV_BACKUP_TIME` (Standard 03:00):
+Der Container `backup` sichert täglich um `LMV_BACKUP_TIME` (Standard 03:00). War der Rechner
+zu diesem Zeitpunkt ausgeschaltet oder im Ruhezustand, wird die Sicherung nachgeholt, sobald
+der Dienst wieder läuft (Prüfung alle 5 Minuten). Gesichert werden:
 
 - Datenbank (`pg_dump`, Custom-Format) → `db.dump`
 - Produktbilder → `media.tar.gz`
