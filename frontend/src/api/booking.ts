@@ -28,7 +28,14 @@ export function useBooking<TBody>(path: string, onSuccess?: (r: BookingResult) =
     },
     onError: (e) => {
       // Fachliche Ablehnung (z. B. Bestand geändert) → neuer Schlüssel für den nächsten Versuch
-      if (e instanceof ApiError) key.current = newIdempotencyKey();
+      if (e instanceof ApiError) {
+        key.current = newIdempotencyKey();
+        // Bestand und Vorschlag neu laden, damit der nächste Versuch auf dem aktuellen Stand
+        // beruht – sonst würde er mit denselben veralteten Positionen erneut abgelehnt.
+        qc.invalidateQueries({ queryKey: ['stock'] });
+        qc.invalidateQueries({ queryKey: ['consumption-plan'] });
+        qc.invalidateQueries({ queryKey: ['products'] });
+      }
       notifications.show({ color: 'red', title: 'Nicht gebucht', message: errorMessage(e), autoClose: 8000 });
     },
   });

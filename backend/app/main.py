@@ -45,14 +45,15 @@ async def lifespan(_: FastAPI):
 
 
 def create_app() -> FastAPI:
+    docs = get_settings().api_docs
     app = FastAPI(
         title="Lebensmittelverwaltung API",
         version="0.1.0",
         description="REST-API der selbst gehosteten Lebensmittel- und Vorratsverwaltung.",
         lifespan=lifespan,
-        docs_url=f"{API_PREFIX}/docs",
-        redoc_url=f"{API_PREFIX}/redoc",
-        openapi_url=f"{API_PREFIX}/openapi.json",
+        docs_url=f"{API_PREFIX}/docs" if docs else None,
+        redoc_url=f"{API_PREFIX}/redoc" if docs else None,
+        openapi_url=f"{API_PREFIX}/openapi.json" if docs else None,
     )
     register_error_handlers(app)
 

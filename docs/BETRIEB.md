@@ -52,7 +52,9 @@ geändert und `LMV_BOOTSTRAP_ADMIN_PASSWORD` aus der `.env` entfernt werden.
 | `db` | PostgreSQL 17 |
 | `backup` | Tägliche Datensicherung |
 
-Die API-Dokumentation (OpenAPI) ist unter `https://<adresse>/api/v1/docs` erreichbar.
+Die API-Dokumentation (OpenAPI) ist standardmäßig abgeschaltet, damit ohne Anmeldung nichts
+über die API abrufbar ist. Bei Bedarf `LMV_API_DOCS=true` in der `.env` setzen; sie ist dann
+unter `https://<adresse>/api/v1/docs` erreichbar. In der lokalen Entwicklung ist sie an.
 
 ## HTTPS
 
@@ -78,7 +80,7 @@ Portfreigabe im Router. Das Zertifikat ist ein reguläres Let's-Encrypt-Zertifik
    LMV_SITE_ADDRESS=heimserver.tail1234.ts.net
    LMV_TLS_MODE=tailscale
    COMPOSE_FILE=docker-compose.yml:docker-compose.tailscale.yml
-   LMV_BIND_ADDRESS=100.x.y.z    # Ausgabe von: tailscale ip -4  (optional, sperrt das Heimnetz aus)
+   LMV_BIND_ADDRESS=100.x.y.z    # Ausgabe von: tailscale ip -4 (empfohlen, sperrt das Heimnetz aus)
    ```
 5. `docker compose up -d` – danach ist die App unter `https://heimserver.tail1234.ts.net`
    erreichbar.

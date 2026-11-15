@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     off_base_url: str = "https://world.openfoodfacts.org"
 
     log_level: str = "INFO"
+    # OpenAPI-Dokumentation unter /api/v1/docs; in der Installation standardmäßig aus
+    # (docker-compose.yml), damit ohne Anmeldung nichts über die API abrufbar ist.
+    api_docs: bool = True
 
 
 @lru_cache

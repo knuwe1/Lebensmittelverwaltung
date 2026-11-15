@@ -46,6 +46,9 @@ def _schema():
 @pytest.fixture(autouse=True)
 def _clean_tables():
     yield
+    from app.core.login_throttle import login_throttle
+
+    login_throttle._states.clear()  # Fehlversuche nicht in andere Tests mitnehmen
     tables = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
     with engine.begin() as conn:
         conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
