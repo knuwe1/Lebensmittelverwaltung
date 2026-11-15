@@ -41,6 +41,8 @@ class ReceiptCreate(BaseModel):
     location_id: uuid.UUID
     lines: list[ReceiptLine] = Field(min_length=1, max_length=50)
     note: str | None = Field(default=None, max_length=2000)
+    # Einlagerung aus der Einkaufsliste: Position wird in derselben Buchung erledigt (FR-SHP-009)
+    shopping_list_item_id: uuid.UUID | None = None
 
 
 class StockItemOut(BaseModel):

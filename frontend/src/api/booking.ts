@@ -21,6 +21,8 @@ export function useBooking<TBody>(path: string, onSuccess?: (r: BookingResult) =
       qc.invalidateQueries({ queryKey: ['movements'] });
       qc.invalidateQueries({ queryKey: ['consumption-plan'] });
       qc.invalidateQueries({ queryKey: ['recent-products'] });
+      // Bestand und Status auf der Einkaufsliste ändern sich mit jeder Buchung
+      qc.invalidateQueries({ queryKey: ['shopping-list'] });
       qc.setQueryData(['product', r.product.id], r.product);
       onSuccess?.(r);
     },

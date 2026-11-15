@@ -1,10 +1,12 @@
 import { Anchor, Button, Card, Group, SimpleGrid, Stack, Text, Title } from '@mantine/core';
-import { IconCircleCheck, IconPackageExport, IconPackageImport } from '@tabler/icons-react';
+import { IconCircleCheck, IconPackageExport, IconPackageImport, IconPackages, IconShoppingCart } from '@tabler/icons-react';
+import type { Icon } from '@tabler/icons-react';
 import { Link } from 'react-router-dom';
-import { useExpiring, useProducts, useStock, useStockLevels } from '../api/hooks';
+import { useExpiring, useProducts, useShoppingList, useStock, useStockLevels } from '../api/hooks';
 import { ExpiryText } from '../components/ExpiryText';
 import { StockLevelBadge } from '../components/StockLevelBadge';
 import { formatQuantity } from '../lib/format';
+import { shoppingQuantity } from './ShoppingListPage';
 import { useUser } from '../auth/AuthContext';
 import { formatDateTime } from '../lib/format';
 import { MovementBadge, signedQuantity, useMovements } from './HistoryPage';
@@ -20,9 +22,11 @@ function LowStockCard() {
     <Card withBorder>
       <Group justify="space-between" mb="xs">
         <Text fw={600}>Niedriger Bestand</Text>
-        <Text size="sm" c={urgent ? 'red.8' : 'dimmed'} fw={urgent ? 600 : undefined}>
-          {urgent} nachkaufen{data.length > urgent ? ` · ${data.length - urgent} knapp` : ''}
-        </Text>
+        {data.length > 0 && (
+          <Text size="sm" c={urgent ? 'red.8' : 'dimmed'} fw={urgent ? 600 : undefined}>
+            {urgent} nachkaufen{data.length > urgent ? ` · ${data.length - urgent} knapp` : ''}
+          </Text>
+        )}
       </Group>
       {data.length === 0 ? (
         <AllGood text="Alle überwachten Lebensmittel sind ausreichend vorrätig." />
@@ -89,6 +93,56 @@ function ExpiryCard() {
   );
 }
 
+/** Aktuelle Einkaufsliste (Spez. 9.2): offene Positionen. */
+function ShoppingCard() {
+  const { data } = useShoppingList();
+  if (!data) return null;
+  const open = data.items.filter((i) => i.status === 'open' && !i.optional);
+  const purchased = data.items.filter((i) => i.status === 'purchased').length;
+  return (
+    <Card withBorder>
+      <Group justify="space-between" mb="xs">
+        <Text fw={600}>Einkaufsliste</Text>
+        <Anchor component={Link} to="/einkaufsliste" size="sm">
+          Öffnen
+        </Anchor>
+      </Group>
+      {open.length === 0 ? (
+        <Text size="sm" c="dimmed">
+          Nichts offen{purchased ? ` · ${purchased} gekauft, noch einlagern` : ''}.
+        </Text>
+      ) : (
+        <Stack gap={6}>
+          {open.slice(0, PREVIEW).map((i) => (
+            <Group key={i.id} justify="space-between" wrap="nowrap" gap="xs">
+              <Text size="sm" truncate>
+                {i.name}
+              </Text>
+              <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>
+                {shoppingQuantity(i)}
+              </Text>
+            </Group>
+          ))}
+          {open.length > PREVIEW && <Text size="xs" c="dimmed">und {open.length - PREVIEW} weitere</Text>}
+          {purchased > 0 && <Text size="xs" c="dimmed">{purchased} gekauft, noch einlagern</Text>}
+        </Stack>
+      )}
+    </Card>
+  );
+}
+
+/** Große Startaktion (Spez. 9.3); Symbol über dem Text, damit auch lange Wörter passen. */
+function QuickAction({ to, icon: I, label, primary }: { to: string; icon: Icon; label: string; primary?: boolean }) {
+  return (
+    <Button component={Link} to={to} h={88} size="lg" variant={primary ? 'filled' : 'light'} px="xs">
+      <Stack gap={4} align="center">
+        <I size={28} aria-hidden />
+        {label}
+      </Stack>
+    </Button>
+  );
+}
+
 function AllGood({ text }: { text: string }) {
   return (
     <Group gap={6} wrap="nowrap">
@@ -98,7 +152,7 @@ function AllGood({ text }: { text: string }) {
   );
 }
 
-/** Startseite (Spez. 9.2/9.3) mit kompakten Warnungen. Die Einkaufsliste folgt in Phase 5b. */
+/** Startseite (Spez. 9.2/9.3) mit Schnellaktionen, kompakten Warnungen und Einkaufsliste. */
 export function DashboardPage() {
   const user = useUser();
   const products = useProducts({ limit: 1 });
@@ -107,17 +161,16 @@ export function DashboardPage() {
   return (
     <Stack>
       <Title order={2}>Hallo {user.display_name}</Title>
-      <SimpleGrid cols={2}>
-        <Button component={Link} to="/einlagern" size="xl" h={88} leftSection={<IconPackageImport size={28} />}>
-          Einlagern
-        </Button>
-        <Button component={Link} to="/entnehmen" size="xl" h={88} variant="light" leftSection={<IconPackageExport size={28} />}>
-          Entnehmen
-        </Button>
+      <SimpleGrid cols={{ base: 2, sm: 4 }}>
+        <QuickAction to="/einlagern" icon={IconPackageImport} label="Einlagern" primary />
+        <QuickAction to="/entnehmen" icon={IconPackageExport} label="Entnehmen" />
+        <QuickAction to="/vorraete" icon={IconPackages} label="Vorräte" />
+        <QuickAction to="/einkaufsliste" icon={IconShoppingCart} label="Einkaufsliste" />
       </SimpleGrid>
-      <SimpleGrid cols={{ base: 1, md: 2 }}>
+      <SimpleGrid cols={{ base: 1, md: 3 }}>
         <ExpiryCard />
         <LowStockCard />
+        <ShoppingCard />
       </SimpleGrid>
       <SimpleGrid cols={{ base: 2, sm: 4 }}>
         <Card withBorder component={Link} to="/lebensmittel">

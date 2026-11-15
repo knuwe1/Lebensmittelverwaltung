@@ -227,3 +227,51 @@ export interface ProductPrefill {
   barcode?: string;
   suggestion?: ProductSuggestion;
 }
+
+/** Position der gemeinsamen Einkaufsliste (FR-SHP-005…010). */
+export interface ShoppingItem {
+  id: string;
+  /** auto = aus der Bedarfsermittlung, manual = vom Benutzer ergänzt (BR-020) */
+  origin: 'auto' | 'manual';
+  /** Nahe am Mindestbestand, noch nicht übernommen */
+  optional: boolean;
+  status: 'open' | 'purchased' | 'done';
+  product_id: string | null;
+  name: string;
+  brand: string | null;
+  category_name: string | null;
+  base_unit: BaseUnit | null;
+  suggested_quantity: number | null;
+  /** Wirksame Menge (manuell angepasst, sonst Vorschlag), in der Basiseinheit */
+  quantity: number | null;
+  quantity_adjusted: boolean;
+  package: {
+    variant_id: string;
+    package_quantity: number;
+    package_unit: string;
+    base_quantity: number;
+    name: string | null;
+  } | null;
+  packages: number | null;
+  received_quantity: number;
+  comment: string | null;
+  available_quantity: number | null;
+  minimum_stock: number | null;
+  target_stock: number | null;
+  level_status: StockLevelStatus | null;
+  purchased_at: string | null;
+  created_at: string;
+}
+
+export interface ShoppingList {
+  id: string;
+  name: string;
+  items: ShoppingItem[];
+}
+
+export interface RefreshResult {
+  added: number;
+  updated: number;
+  removed: number;
+  list: ShoppingList;
+}

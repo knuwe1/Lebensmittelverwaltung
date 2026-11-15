@@ -7,6 +7,7 @@ import type {
   Location,
   Page,
   Product,
+  ShoppingList,
   StockItem,
   StockLevel,
   StockLevelStatus,
@@ -120,5 +121,12 @@ export function useStockLevels(status: StockLevelStatus[] = []) {
     queryKey: queryKeys.levels(status),
     queryFn: ({ signal }) =>
       api.get<StockLevel[]>('/stock/levels', status.length ? { status } : {}, signal),
+  });
+}
+
+export function useShoppingList() {
+  return useQuery({
+    queryKey: ['shopping-list'],
+    queryFn: () => api.get<ShoppingList>('/shopping-list'),
   });
 }

@@ -7,6 +7,7 @@ import {
   IconPackageImport,
   IconPackages,
   IconSettings,
+  IconShoppingCart,
   IconToolsKitchen2,
 } from '@tabler/icons-react';
 import type { Icon } from '@tabler/icons-react';
@@ -24,6 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/einlagern', label: 'Einlagern', icon: IconPackageImport },
   { to: '/entnehmen', label: 'Entnehmen', icon: IconPackageExport },
   { to: '/vorraete', label: 'Vorräte', icon: IconPackages },
+  { to: '/einkaufsliste', label: 'Einkaufsliste', icon: IconShoppingCart },
   { to: '/haltbarkeit', label: 'Haltbarkeit', icon: IconCalendarExclamation },
   { to: '/lebensmittel', label: 'Lebensmittel', icon: IconToolsKitchen2 },
   { to: '/lagerplaetze', label: 'Lagerplätze', icon: IconBuildingWarehouse },
@@ -37,4 +39,5 @@ export const MOBILE_ACTIONS: NavItem[] = [
   { to: '/einlagern', label: 'Einlagern', icon: IconPackageImport },
   { to: '/entnehmen', label: 'Entnehmen', icon: IconPackageExport },
   { to: '/vorraete', label: 'Vorräte', icon: IconPackages },
+  { to: '/einkaufsliste', label: 'Einkauf', icon: IconShoppingCart },
 ];
