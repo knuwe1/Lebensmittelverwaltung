@@ -45,6 +45,11 @@ class AuthenticationError(DomainError):
     code = "not_authenticated"
 
 
+class TooManyAttempts(DomainError):
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    code = "too_many_attempts"
+
+
 class PermissionDenied(DomainError):
     status_code = status.HTTP_403_FORBIDDEN
     code = "forbidden"

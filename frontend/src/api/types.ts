@@ -275,3 +275,47 @@ export interface RefreshResult {
   removed: number;
   list: ShoppingList;
 }
+
+/** Zeile einer Inventur: eine Bestandsposition oder ein ergänztes Lebensmittel (FR-INV-002/009). */
+export interface InventoryItem {
+  id: string;
+  stock_item_id: string | null;
+  is_new: boolean;
+  product_id: string;
+  product_name: string;
+  product_brand: string | null;
+  base_unit: BaseUnit;
+  variant_id: string | null;
+  location_id: string;
+  location_path: string;
+  expiry_type: ExpiryType;
+  expiry_date: string | null;
+  expected_quantity: number;
+  counted_quantity: number | null;
+  difference: number | null;
+  /** Aktueller Buchbestand; weicht er vom Soll ab, wurde seit dem Start gebucht (FR-INV-008). */
+  current_quantity: number | null;
+  conflict: boolean;
+  conflict_reason: 'changed' | 'new' | null;
+  note: string | null;
+  counted_at: string | null;
+  applied_delta: number | null;
+}
+
+export interface Inventory {
+  id: string;
+  status: 'open' | 'completed' | 'cancelled';
+  location_id: string | null;
+  scope_label: string;
+  include_sublocations: boolean;
+  location_ids: string[];
+  location_paths: string[];
+  note: string | null;
+  started_at: string;
+  started_by_name: string;
+  completed_at: string | null;
+  completed_by_name: string | null;
+  transaction_id: string | null;
+  summary: { total: number; counted: number; differences: number; conflicts: number };
+  items: InventoryItem[] | null;
+}

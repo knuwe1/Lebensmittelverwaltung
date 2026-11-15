@@ -47,3 +47,42 @@ def test_password_change_invalidates_other_sessions(app, admin_client):
 def test_logout(admin_client):
     admin_client.post("/api/v1/auth/logout")
     assert admin_client.get("/api/v1/auth/me").status_code == 401
+
+
+def test_logout_signs_out_all_devices(app, admin):
+    """DEC-031: Abmelden macht das Token serverseitig ungültig, auf allen Geräten."""
+    from tests.conftest import _login
+
+    phone, laptop = _login(app, "admin"), _login(app, "admin")
+    stolen = phone.cookies.get("lmv_session")
+    assert laptop.post("/api/v1/auth/logout").status_code == 204
+    assert phone.get("/api/v1/auth/me").status_code == 401
+    replay = app_client(app).get("/api/v1/auth/me", headers={"Authorization": f"Bearer {stolen}"})
+    assert replay.status_code == 401
+    # Abmelden ohne gültige Sitzung ist harmlos
+    assert laptop.post("/api/v1/auth/logout").status_code == 204
+    assert _login(app, "admin").get("/api/v1/auth/me").status_code == 200
+
+
+def app_client(app):
+    from fastapi.testclient import TestClient
+
+    return TestClient(app)
+
+
+def test_api_docs_can_be_disabled(monkeypatch):
+    """Befund Sicherheitsprüfung: In der Installation ist das API-Schema nicht öffentlich."""
+    from fastapi.testclient import TestClient
+
+    from app.core.config import get_settings
+    from app.main import create_app
+
+    monkeypatch.setenv("LMV_API_DOCS", "false")
+    get_settings.cache_clear()
+    try:
+        client = TestClient(create_app())
+        assert client.get("/api/v1/openapi.json").status_code == 404
+        assert client.get("/api/v1/docs").status_code == 404
+    finally:
+        monkeypatch.delenv("LMV_API_DOCS")
+        get_settings.cache_clear()
