@@ -2,10 +2,10 @@ import { Select } from '@mantine/core';
 import type { SelectProps } from '@mantine/core';
 import { useCategories, useLocations } from '../api/hooks';
 
-type Props = Omit<SelectProps, 'data'> & { excludeId?: string };
+type Props = Omit<SelectProps, 'data'> & { excludeId?: string; onlyIds?: string[] };
 
 /** Lagerplatzauswahl mit vollständigem Pfad, durchsuchbar. */
-export function LocationSelect({ excludeId, ...props }: Props) {
+export function LocationSelect({ excludeId, onlyIds, ...props }: Props) {
   const { data = [] } = useLocations();
   return (
     <Select
@@ -14,7 +14,7 @@ export function LocationSelect({ excludeId, ...props }: Props) {
       searchable
       nothingFoundMessage="Kein Lagerplatz gefunden"
       data={data
-        .filter((l) => l.id !== excludeId)
+        .filter((l) => l.id !== excludeId && (!onlyIds || onlyIds.includes(l.id)))
         .map((l) => ({ value: l.id, label: l.path }))}
       {...props}
     />

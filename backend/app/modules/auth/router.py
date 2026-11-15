@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Response, status
+import math
+
+from fastapi import APIRouter, Request, Response, status
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
-from app.api.deps import CurrentUser, DbSession
+from app.api.deps import CurrentUser, DbSession, get_current_user
 from app.core.config import get_settings
-from app.core.errors import AuthenticationError
+from app.core.errors import AuthenticationError, TooManyAttempts
+from app.core.login_throttle import login_throttle
 from app.core.security import create_access_token, hash_password, verify_password
 from app.modules.users.models import User
 from app.modules.users.schemas import PasswordChange, UserOut
@@ -35,16 +38,36 @@ def _set_cookie(response: Response, token: str) -> None:
 
 @router.post("/login", response_model=UserOut)
 def login(data: LoginRequest, response: Response, db: DbSession):
+    """Anmeldung. Nach mehreren Fehlversuchen für denselben Benutzernamen → 429
+    `too_many_attempts` mit `Retry-After` (Schutz gegen Durchprobieren von Passwörtern)."""
+    wait = login_throttle.wait_seconds(data.username)
+    if wait > 0:
+        seconds = math.ceil(wait)
+        raise TooManyAttempts(
+            f"Zu viele Fehlversuche. Bitte in {seconds} Sekunden erneut versuchen.",
+            details={"retry_after": seconds},
+        )
     user = db.scalar(select(User).where(func.lower(User.username) == data.username.lower()))
     valid = verify_password(data.password, user.password_hash if user else _DUMMY_HASH)
     if not user or not valid or not user.active:
+        login_throttle.failure(data.username)
         raise AuthenticationError("Benutzername oder Passwort ist falsch.", code="invalid_login")
+    login_throttle.success(data.username)
     _set_cookie(response, create_access_token(user.id, user.token_version))
     return user
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(response: Response):
+def logout(request: Request, response: Response, db: DbSession):
+    """Abmelden. Macht alle Anmeldungen dieses Benutzers ungültig – auf allen Geräten –,
+    damit ein abgegriffenes Token nicht weiter nutzbar ist (DEC-031)."""
+    try:
+        user = get_current_user(request, db)
+    except AuthenticationError:
+        user = None  # bereits abgemeldet bzw. Sitzung abgelaufen
+    if user is not None:
+        user.token_version += 1
+        db.commit()
     response.delete_cookie(get_settings().cookie_name, path="/")
 
 

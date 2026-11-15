@@ -47,6 +47,9 @@ export function AppLayout() {
             <Menu.Dropdown>
               <Menu.Item leftSection={<IconLogout size={16} />} onClick={logout}>
                 Abmelden
+                <Text size="xs" c="dimmed">
+                  auf allen Geräten
+                </Text>
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>

@@ -2,6 +2,7 @@
 
 from app.db.base import Base
 from app.modules.catalog.models import Product, ProductCategory, ProductVariant
+from app.modules.inventory.models import Inventory, InventoryItem
 from app.modules.locations.models import Location
 from app.modules.settings.models import HouseholdSettings
 from app.modules.shopping.models import ShoppingList, ShoppingListItem
@@ -13,6 +14,8 @@ __all__ = [
     "Household",
     "HouseholdSettings",
     "IdempotencyRecord",
+    "Inventory",
+    "InventoryItem",
     "Location",
     "Product",
     "ProductCategory",

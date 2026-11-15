@@ -1,6 +1,7 @@
 import {
   IconBuildingWarehouse,
   IconCalendarExclamation,
+  IconClipboardList,
   IconHistory,
   IconLayoutDashboard,
   IconPackageExport,
@@ -29,6 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/haltbarkeit', label: 'Haltbarkeit', icon: IconCalendarExclamation },
   { to: '/lebensmittel', label: 'Lebensmittel', icon: IconToolsKitchen2 },
   { to: '/lagerplaetze', label: 'Lagerplätze', icon: IconBuildingWarehouse },
+  { to: '/inventur', label: 'Inventur', icon: IconClipboardList },
   { to: '/historie', label: 'Historie', icon: IconHistory },
   { to: '/einstellungen', label: 'Einstellungen', icon: IconSettings },
 ];

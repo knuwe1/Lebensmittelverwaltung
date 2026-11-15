@@ -14,7 +14,13 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from app.core.config import get_settings
 from app.core.errors import ValidationFailed
 
-Image.MAX_IMAGE_PIXELS = 40_000_000
+# Pillow bricht erst beim Doppelten ab und warnt darunter nur. Die Grenze wird deshalb vor dem
+# Dekodieren selbst geprüft – sonst bläht ein kleines, stark komprimiertes Bild den Speicher
+# auf mehrere hundert MB auf (Befund Sicherheitsprüfung Phase 6b).
+MAX_PIXELS = 40_000_000
+Image.MAX_IMAGE_PIXELS = MAX_PIXELS
+# JPEG (Handyfotos) direkt verkleinert dekodieren; gespeichert wird ohnehin höchstens 1024 px.
+DECODE_SIZE = (2048, 2048)
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP", "HEIF", "GIF", "BMP"}
 
 
@@ -30,10 +36,18 @@ def load_image(data: bytes) -> Image.Image:
     try:
         with Image.open(io.BytesIO(data)) as probe:
             fmt = probe.format
+            width, height = probe.size
             probe.verify()
         if fmt not in ALLOWED_FORMATS:
             raise ValidationFailed("Dieses Bildformat wird nicht unterstützt.", code="image_format")
+        if width * height > MAX_PIXELS:
+            raise ValidationFailed(
+                "Das Bild hat zu viele Bildpunkte (höchstens 40 Megapixel).",
+                code="image_too_large",
+            )
         img = Image.open(io.BytesIO(data))
+        if fmt == "JPEG":
+            img.draft("RGB", DECODE_SIZE)
         img.load()
     except (UnidentifiedImageError, Image.DecompressionBombError, OSError, SyntaxError) as exc:
         raise ValidationFailed("Die Datei ist kein gültiges Bild.", code="invalid_image") from exc

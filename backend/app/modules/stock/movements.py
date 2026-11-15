@@ -331,9 +331,7 @@ def reverse_transaction(
             "Ein Storno kann nicht storniert werden. Bitte stattdessen neu buchen.",
             code="reversal_of_reversal",
         )
-    if any(
-        m.movement_type == MovementType.INVENTORY_CORRECTION for m in movements
-    ):  # pragma: no cover – ab Phase 6
+    if any(m.movement_type == MovementType.INVENTORY_CORRECTION for m in movements):
         raise ValidationFailed(
             "Inventurkorrekturen werden über eine neue Inventur berichtigt.",
             code="reversal_not_supported",
