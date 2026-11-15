@@ -17,6 +17,30 @@ docker compose up -d
 
 Alternativ lassen sich die Images lokal bauen: `docker compose up -d --build`.
 
+### Empfohlen: eigener Betriebsordner
+
+Läuft die Installation auf einem Rechner, auf dem auch entwickelt wird, gehört sie in einen
+eigenen Ordner außerhalb des Repositorys. Er enthält nur die Betriebsdateien aus einem
+Release-Tag, die `.env` und die Sicherungen. So wirkt kein Branchwechsel und kein
+`docker compose` im Repository auf die Live-Installation.
+
+```bash
+REPO=~/Work/Dev/Lebensmittelverwaltung   # Klon des Repositorys
+LIVE=~/Lebensmittelverwaltung-Live       # Betriebsordner
+mkdir -p "$LIVE"
+git -C "$REPO" fetch --tags
+git -C "$REPO" archive v0.1.0 docker-compose.yml docker-compose.tailscale.yml deploy/backup .env.example \
+  | tar -x -C "$LIVE"
+cd "$LIVE" && cp .env.example .env && chmod 600 .env
+# .env anpassen (siehe oben) und die Version festlegen: LMV_VERSION=0.1.0
+docker compose pull && docker compose up -d --no-build
+```
+
+`LMV_VERSION` immer auf eine feste Version setzen, nicht `latest` – dann läuft genau der
+Stand eines Releases, und lokal gebaute Images können ihn nicht unbemerkt ersetzen.
+Daten liegen in den benannten Volumes `lebensmittelverwaltung_*`. Ein Umzug des
+Betriebsordners braucht daher nur `docker compose down` im alten und `up -d` im neuen Ordner.
+
 Beim ersten Start wird der Administrator aus `LMV_BOOTSTRAP_ADMIN_*` angelegt.
 Das Passwort sollte danach in der Anwendung unter *Einstellungen → Mein Konto*
 geändert und `LMV_BOOTSTRAP_ADMIN_PASSWORD` aus der `.env` entfernt werden.
@@ -118,16 +142,39 @@ Er läuft in einer Transaktion; schlägt er fehl, bleibt der vorherige Datenbank
 
 ## Update
 
+Im Betriebsordner (siehe oben), Beispiel für `v0.2.0`:
+
 ```bash
-git pull                     # bzw. neues Release-Tag auschecken
-# LMV_VERSION in .env auf die neue Version setzen
-docker compose pull && docker compose up -d
+cd ~/Lebensmittelverwaltung-Live
+docker compose exec -T backup sh /scripts/backup.sh       # 1. Sicherung
+git -C ~/Work/Dev/Lebensmittelverwaltung fetch --tags       # 2. Betriebsdateien des Releases
+git -C ~/Work/Dev/Lebensmittelverwaltung archive v0.2.0 \
+  docker-compose.yml docker-compose.tailscale.yml deploy/backup .env.example | tar -x -C .
+sed -i 's/^LMV_VERSION=.*/LMV_VERSION=0.2.0/' .env          # 3. Version
+docker compose pull                                         # 4. Images holen (App läuft weiter)
+docker compose up -d --no-build                             # 5. Neustart, kurze Unterbrechung
+docker compose ps                                           # 6. Kontrolle
 ```
 
-Datenbankmigrationen laufen beim Start des Backends automatisch. Vor einem Update
-empfiehlt sich eine manuelle Sicherung.
+- Neue Einstellungen eines Releases stehen in `.env.example` und in den Release-Notes; bei
+  Bedarf in die `.env` übernehmen.
+- Datenbankmigrationen laufen beim Start des Backends automatisch.
+- **Zurück auf eine ältere Version** nur zusammen mit der Wiederherstellung der Sicherung
+  aus Schritt 1: Migrationen werden nur vorwärts ausgeführt, eine ältere Version passt
+  danach nicht mehr zur Datenbank.
+
+Ohne Betriebsordner (Installation direkt im Klon): neues Release-Tag auschecken,
+`LMV_VERSION` setzen, `docker compose pull && docker compose up -d`.
 
 ## Testen auf dem eigenen Rechner und Handy
+
+> **Achtung, wenn auf demselben Rechner eine Live-Installation läuft:** Die Compose-Datei
+> legt den Projektnamen `lebensmittelverwaltung` fest. Ein `docker compose` im
+> Repository würde deshalb die Container und Daten-Volumes der Live-Installation
+> verwenden – `down -v` löscht dann echte Daten. Zum Testen immer einen eigenen
+> Projektnamen, eigene Ports und einen eigenen Image-Tag verwenden:
+> `docker compose -p lmv-test --env-file /tmp/lmv-test.env up -d --build` mit
+> `LMV_VERSION=test`, `LMV_HTTP_PORT`/`LMV_HTTPS_PORT` (z. B. 18080/18443) in der Datei.
 
 Schnellster Weg ohne Tailscale – Rechner und Handy im selben WLAN
 (`192.168.178.105` durch die eigene IP ersetzen, siehe `hostname -I`):
