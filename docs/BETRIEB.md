@@ -84,6 +84,15 @@ Portfreigabe im Router. Das Zertifikat ist ein reguläres Let's-Encrypt-Zertifik
    ```
 5. `docker compose up -d` – danach ist die App unter `https://heimserver.tail1234.ts.net`
    erreichbar.
+   Mit `LMV_BIND_ADDRESS` muss Docker nach einem Neustart des Rechners auf Tailscale warten –
+   sonst existiert die Tailscale-IP beim Start der Container noch nicht und der Web-Container
+   kann nicht starten. Einmalig einrichten:
+   ```bash
+   sudo mkdir -p /etc/systemd/system/docker.service.d
+   printf '[Unit]\nAfter=tailscaled.service\nWants=tailscaled.service\n' \
+     | sudo tee /etc/systemd/system/docker.service.d/nach-tailscale.conf
+   sudo systemctl daemon-reload
+   ```
 6. Auf jedem Android-Gerät die Tailscale-App installieren und im selben Tailnet anmelden.
    Anschließend die Adresse in Chrome öffnen und über *Zum Startbildschirm hinzufügen*
    als App installieren.
