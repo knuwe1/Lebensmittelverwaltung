@@ -83,22 +83,57 @@ von 12 % bei der Produkterkennung und 0 % beim MHD bringt dem Benutzer keinen Nu
 Vorverarbeitung wie Entzerrung oder Binarisierung würde die Grundprobleme (Schriftarten,
 Wölbung, Nadeldruck) nicht lösen.
 
+## Gegenprobe mit KI-Modellen mit Bildverständnis
+
+Weil OCR nicht reicht, wurden zwei multimodale Sprachmodelle mit demselben Bildsatz geprüft. Sie
+bekamen dieselbe Aufgabe: alle Lebensmittel auf dem Foto nennen und einem Eintrag aus dem
+Testkatalog zuordnen, außerdem ein lesbares MHD angeben.
+
+### Gemini (externer Dienst, `gemini-3.8-flash`, kostenloses Kontingent)
+
+Von 40 Anfragen wurden nur 2 beantwortet, beide richtig. Den Frischkäse hat Gemini mit der
+genauen Sorte benannt, auf dem Tetrapack der passierten Tomaten zusätzlich ein MHD gelesen. Alle
+übrigen Anfragen scheiterten an den Grenzen des Dienstes: zu viele Anfragen (HTTP 429), Dienst
+überlastet (HTTP 503) oder Zeitüberschreitung. Auch mit Wiederholungen und Pausen war nach
+kurzer Zeit das Tageslimit erreicht.
+
+**Bewertung:** Fachlich vielversprechend. Das kostenlose Kontingent ist für den Alltag aber
+nicht verlässlich, ein bezahlter Zugang ist nicht vorgesehen. Hinzu kommt, dass die Fotos an
+einen externen Anbieter gehen. Gemini scheidet deshalb aus.
+
+### Lokales Modell (Ollama, Qwen2.5-VL 3B) auf dem Server
+
+Der Server ist ein Mini-PC mit Intel N150 (4 Kerne, 14 GB RAM) ohne eigene Grafikkarte. Ollama
+lief testweise als Docker-Container. Geprüft wurden 10 Fotos, darunter die drei MHD-Fotos und
+die Fotos mit zwei Produkten.
+
+| Variante | Dauer pro Foto | Ergebnis |
+| --- | --- | --- |
+| Prozessor, Bild auf 1024 px verkleinert | ca. 190 s | 9 / 10 Fotos vollständig richtig, MHD 2 / 3 |
+| Prozessor, 640 px, kurzer Prompt ohne Katalog | ca. 170 s | schlechter (Senf als „Honig“ erkannt, kein MHD) |
+| Eingebaute Intel-Grafik über Vulkan | 30–45 s | unbrauchbar (leere oder ablehnende Antworten) |
+
+Die Qualität ist gut. Die Katalog-IDs hält das kleine Modell zwar nicht ein, seine
+Beschreibungen entsprechen aber den Katalognamen, sodass die Zuordnung in der App erfolgen kann.
+Das Problem ist die Zeit. Ein kurzer Text ist in 2 s verarbeitet, das Einlesen des Bildes
+braucht dagegen rund 160 s. Diese Zeit hängt kaum von der Bildgröße ab, sondern von der
+Rechenleistung. Während dieser Zeit sind alle vier Kerne ausgelastet, auch für die laufende
+Anwendung.
+
+**Bewertung:** Fachlich geeignet, auf der vorhandenen Hardware für den Alltag aber zu langsam.
+
 ## Empfehlung
 
-1. **Barcode bleibt der Hauptweg** zur Produktidentifikation (Phase 4a). Er ist zuverlässig und
-   deckt fast alle verpackten Produkte ab.
-2. **Bilderkennung über einen externen KI-Dienst mit Bildverständnis** (multimodales
-   Sprachmodell) als optionalen Adapter umsetzen, so wie in DEC-022 bereits vorgesehen. Er wird
-   aber nicht mehr nur als Zusatz neben Tesseract betrachtet, sondern als der eigentliche Weg für
-   Fotoerkennung und MHD-Lesen. Ein solcher Dienst kann gestaltete Schriften, gewölbte
-   Verpackungen, lose Ware und mehrere Produkte pro Foto verarbeiten. Datenschutz bleibt wie
-   festgelegt: Bilder werden nur nach ausdrücklicher Konfiguration und mit Hinweis an den
-   Benutzer übertragen.
-3. **Tesseract nicht als Standard einbauen.** Ohne konfigurierten Dienst bleibt es bei Barcode,
-   Suche und manueller Eingabe. Das entspricht FR-PRD-004: Ein Ausfall der Bilderkennung darf
-   eine manuelle Buchung nicht verhindern.
-4. Vor der Umsetzung von Punkt 2 denselben Bildsatz gegen den gewählten Dienst laufen lassen,
-   als Vergleichswert zu diesem Nachweis.
+1. **Fotoerkennung und MHD-Lesen vorerst zurückstellen.** Phase 4 wird mit Barcode, Suche und
+   manueller Eingabe abgeschlossen.
+2. **Schnittstelle trotzdem vorsehen.** Die Bilderkennung bleibt als austauschbarer Adapter
+   eingeplant, damit sie später ohne Umbau ergänzt werden kann. Bevorzugt wird ein lokales
+   Modell über Ollama, sobald ein Rechner mit geeigneter Grafikkarte im Tailnet verfügbar ist.
+   Ein externer Dienst bleibt nur als ausdrücklich konfigurierte Option.
+3. **Tesseract nicht einbauen.**
+4. **Bevor ein Adapter umgesetzt wird,** denselben Bildsatz auf der dann vorhandenen Hardware
+   erneut prüfen. Zielwerte: mindestens 90 % der Produkte richtig, Antwort in höchstens etwa
+   10 s pro Foto.
 
 Umgesetzt als DEC-030 im [Entscheidungsprotokoll](ENTSCHEIDUNGEN.md); DEC-007 / DEC-022 ist
-dort als ersetzt markiert. Erster Kandidat für den externen Dienst ist Gemini.
+dort als ersetzt markiert.

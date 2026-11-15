@@ -4,7 +4,7 @@ Selbst gehostete Lebensmittel- und Vorratsverwaltung für einen privaten Haushal
 nutzbar im Browser und als Progressive Web App auf Android-Smartphones.
 
 - Bestände nach Lagerplatz und Haltbarkeitsdatum (FEFO-Entnahme)
-- Erfassung per Barcode, Suche oder optional per Foto (externer KI-Dienst)
+- Erfassung per Barcode oder Suche (Fotoerkennung vorerst zurückgestellt, DEC-030)
 - Mindest-/Zielbestände und automatische Einkaufsliste
 - Haltbarkeitsüberwachung, Inventur, lückenlose Bewegungshistorie
 
