@@ -13,6 +13,7 @@ import { ProductDetailPage } from './pages/ProductDetailPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { ReceivePage } from './pages/ReceivePage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ShoppingListPage } from './pages/ShoppingListPage';
 import { StockPage } from './pages/StockPage';
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -54,6 +55,7 @@ export function App() {
         <Route path="entnehmen" element={<ConsumePage />} />
         <Route path="vorraete" element={<StockPage />} />
         <Route path="haltbarkeit" element={<ExpiryPage />} />
+        <Route path="einkaufsliste" element={<ShoppingListPage />} />
         <Route path="historie" element={<HistoryPage />} />
         <Route path="lebensmittel" element={<ProductsPage />} />
         <Route path="lebensmittel/:id" element={<ProductDetailPage />} />

@@ -7,6 +7,7 @@ from app.api.deps import CurrentUser, DbSession
 from app.core.idempotency import run_idempotent
 from app.core.units import PositiveQuantity
 from app.modules.catalog.schemas import ProductOut
+from app.modules.shopping import service as shopping
 from app.modules.stock import movements, service
 from app.modules.stock.models import MovementType
 from app.modules.stock.schemas import (
@@ -115,10 +116,16 @@ def book_receipt(
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ):
     """Einlagerung buchen."""
-    return run_idempotent(
-        db, user, idempotency_key, "POST /stock/receipts", data,
-        lambda: service.book_receipt(db, user, data),
-    )  # fmt: skip
+
+    def book():
+        result = service.book_receipt(db, user, data)
+        if data.shopping_list_item_id:
+            shopping.record_receipt(
+                db, user, data.shopping_list_item_id, data.product_id, result.received_quantity
+            )
+        return result
+
+    return run_idempotent(db, user, idempotency_key, "POST /stock/receipts", data, book)
 
 
 @router.get("/consumption-plan", response_model=ConsumptionPlan)

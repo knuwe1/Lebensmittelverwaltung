@@ -61,3 +61,23 @@ def test_minimum_zero_means_restock_when_empty():
         StockLevelStatus.AT_MINIMUM
     )
     assert stock_level_status(Decimal(1), Decimal(0), Decimal("1.25")) == StockLevelStatus.OK
+
+
+@pytest.mark.parametrize(
+    ("available", "minimum", "target", "package", "expected"),
+    [
+        (1, 2, 6, None, 5),  # Beispiel FR-SHP-006: Milch, Ziel 6 l, Bestand 1 l
+        (1, 2, 6, 1, 5),  # bereits ganze Packungen
+        (1, 2, 6, 2, 6),  # 5 l in 2-l-Packungen → 3 Packungen
+        (300, 500, None, None, 200),  # ohne Zielbestand bis zum Mindestbestand
+        (300, 500, None, 500, 500),
+        (4, 4, None, 1, 1),  # genau am Minimum ohne Ziel → eine Packung
+        (4, 4, None, None, None),  # … ohne Packungsgröße bleibt die Menge offen
+    ],
+)
+def test_restock_quantity(available, minimum, target, package, expected):
+    from app.modules.stock.status import restock_quantity
+
+    dec = lambda v: None if v is None else Decimal(v)  # noqa: E731
+    result = restock_quantity(dec(available), dec(minimum), dec(target), dec(package))
+    assert result == dec(expected)

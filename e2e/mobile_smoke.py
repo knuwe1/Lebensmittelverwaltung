@@ -1,6 +1,7 @@
 """Browser-Durchlauf der mobilen Kernabläufe auf einem simulierten Android-Gerät (Pixel 7):
 Einlagern (Barcode, zwei MHD), Entnehmen (FEFO), Entsorgen, Umlagern, Historie mit Storno,
-Schutz vor Doppelbuchungen, Restmenge per Waage, Warnungen zu Bestand und Haltbarkeit.
+Schutz vor Doppelbuchungen, Restmenge per Waage, Warnungen zu Bestand und Haltbarkeit,
+Einkaufsliste mit Einlagerung.
 
 Erwartet einen frisch gestarteten, leeren Stack mit Administrator admin / adminpass123.
 Aufruf siehe e2e/README.md.
@@ -262,6 +263,49 @@ def main(pw):
         "below",
     ), level
     step("Übersicht und Bestandsstatus nach dem Entsorgen aktuell")
+
+    # Phase 5b: Einkaufsliste. Testjoghurt: Ziel 8, verfügbar 1 → Vorschlag 7 Stück.
+    page.goto(f"{BASE}/einkaufsliste")
+    page.get_by_role("button", name="Bedarf ermitteln").click()
+    expect(page.get_by_text("Bedarf ermittelt: 1 neu.")).to_be_visible()
+    row = page.locator(".mantine-Card-root", has_text="Testjoghurt")
+    expect(row.get_by_text("7 Stück")).to_be_visible()
+    expect(row.get_by_text("Vorschlag")).to_be_visible()
+    step("Bedarf ermittelt: 7 Stück Testjoghurt vorgeschlagen")
+
+    page.get_by_role("button", name="Hinzufügen").click()
+    dialog = page.get_by_role("dialog")
+    dialog.get_by_text("Freier Text").click()
+    dialog.get_by_label("Was?").fill("Backpapier")
+    dialog.get_by_role("button", name="Hinzufügen").click()
+    expect(page.locator(".mantine-Card-root", has_text="Backpapier").get_by_text("Manuell")).to_be_visible()
+    step("Freitext-Position ergänzt")
+
+    page.get_by_label("Testjoghurt gekauft").check()
+    expect(page.get_by_text("Gekauft (1)")).to_be_visible()
+    stock_now = api.get(f"{BASE}/api/v1/products/{joghurt['id']}").json()["stock_quantity"]
+    assert stock_now == 1, stock_now  # BR-007: „gekauft“ ändert den Bestand nicht
+    page.screenshot(path=f"{OUT}/8-einkaufsliste.png", full_page=True)
+    step("Als gekauft markiert, Bestand unverändert")
+
+    page.locator(".mantine-Card-root", has_text="Testjoghurt").get_by_role(
+        "button", name="Einlagern", exact=True
+    ).click()
+    expect(page.get_by_text("Aus der Einkaufsliste")).to_be_visible()
+    expect(page.get_by_label("Menge (Stück)")).to_have_value("7")
+    page.get_by_label("Mindestens haltbar bis (MHD)").fill("01.12.2027")
+    page.keyboard.press("Escape")
+    page.get_by_role("button", name=re.compile(r"7 Stück einlagern")).click()
+    expect(page.get_by_text(re.compile("auf der Einkaufsliste abgehakt"))).to_be_visible()
+    expect(page.get_by_text("Erledigt (1)")).to_be_visible()
+    stock_now = api.get(f"{BASE}/api/v1/products/{joghurt['id']}").json()["stock_quantity"]
+    assert stock_now == 8, stock_now
+    step("Aus der Einkaufsliste eingelagert: Bestand 8, Position erledigt")
+
+    page.goto(f"{BASE}/")
+    expect(page.get_by_role("link", name="Einkaufsliste").first).to_be_visible()
+    page.screenshot(path=f"{OUT}/9-start.png", full_page=True)
+    step("Startseite mit vier Schnellaktionen")
 
     browser.close()
 
