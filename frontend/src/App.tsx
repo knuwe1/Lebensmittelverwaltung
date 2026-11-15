@@ -7,6 +7,8 @@ import { ConsumePage } from './pages/ConsumePage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ExpiryPage } from './pages/ExpiryPage';
 import { HistoryPage } from './pages/HistoryPage';
+import { InventoryDetailPage } from './pages/InventoryDetailPage';
+import { InventoryPage } from './pages/InventoryPage';
 import { LocationsPage } from './pages/LocationsPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
@@ -57,6 +59,8 @@ export function App() {
         <Route path="haltbarkeit" element={<ExpiryPage />} />
         <Route path="einkaufsliste" element={<ShoppingListPage />} />
         <Route path="historie" element={<HistoryPage />} />
+        <Route path="inventur" element={<InventoryPage />} />
+        <Route path="inventur/:id" element={<InventoryDetailPage />} />
         <Route path="lebensmittel" element={<ProductsPage />} />
         <Route path="lebensmittel/:id" element={<ProductDetailPage />} />
         <Route path="lagerplaetze" element={<LocationsPage />} />

@@ -1,7 +1,7 @@
 """Browser-Durchlauf der mobilen Kernabläufe auf einem simulierten Android-Gerät (Pixel 7):
 Einlagern (Barcode, zwei MHD), Entnehmen (FEFO), Entsorgen, Umlagern, Historie mit Storno,
 Schutz vor Doppelbuchungen, Restmenge per Waage, Warnungen zu Bestand und Haltbarkeit,
-Einkaufsliste mit Einlagerung.
+Einkaufsliste mit Einlagerung, Inventur mit Konflikt und Korrekturbuchung.
 
 Erwartet einen frisch gestarteten, leeren Stack mit Administrator admin / adminpass123.
 Aufruf siehe e2e/README.md.
@@ -306,6 +306,52 @@ def main(pw):
     expect(page.get_by_role("link", name="Einkaufsliste").first).to_be_visible()
     page.screenshot(path=f"{OUT}/9-start.png", full_page=True)
     step("Startseite mit vier Schnellaktionen")
+
+    # Phase 6a: Inventur des Kühlschranks, mit Buchung während der Inventur (FR-INV-008)
+    page.goto(f"{BASE}/inventur")
+    page.get_by_role("textbox", name="Bereich").click()
+    page.get_by_role("option", name="Kühlschrank").click()
+    page.get_by_role("button", name="Inventur starten").click()
+    expect(page.get_by_role("heading", name=re.compile("Inventur – Kühlschrank"))).to_be_visible()
+    page.get_by_role("button", name="Rest wie Soll übernehmen").click()
+    expect(page.get_by_text(re.compile(r"(\d+) von \1 gezählt"))).to_be_visible()
+    joghurt_card = page.locator(".mantine-Card-root", has_text="Testjoghurt").filter(
+        has_text="01.12.2027"
+    )
+    joghurt_card.get_by_placeholder("Ist").fill("6")
+    joghurt_card.get_by_placeholder("Ist").press("Enter")
+    expect(joghurt_card.get_by_text("−1 Stück")).to_be_visible()
+    step("Inventur gestartet, gezählt, Differenz −1 Stück")
+
+    milk = api.get(f"{BASE}/api/v1/products?q=Testmilch").json()["items"][0]
+    api.post(
+        f"{BASE}/api/v1/stock/consumptions",
+        data={"product_id": milk["id"], "quantity": 100},
+        headers={"Idempotency-Key": str(uuid.uuid4())},
+    )
+    page.get_by_role("button", name="Auf Buchungen prüfen").click()
+    expect(page.get_by_text(re.compile("Seit dem Start gebucht"))).to_be_visible()
+    expect(page.get_by_role("button", name="Abschließen …")).to_be_disabled()
+    page.screenshot(path=f"{OUT}/10-inventur-konflikt.png", full_page=True)
+    milk_card = page.locator(".mantine-Card-root", has_text="Testmilch")
+    milk_card.get_by_placeholder("Ist").fill("1300")
+    milk_card.get_by_placeholder("Ist").press("Enter")
+    expect(page.get_by_text(re.compile("Seit dem Start gebucht"))).to_have_count(0)
+    step("Buchung während der Inventur erkannt und erneut gezählt")
+
+    page.get_by_role("button", name="Abschließen …").click()
+    dialog = page.get_by_role("dialog")
+    expect(dialog.get_by_text("Testjoghurt")).to_be_visible()
+    dialog.get_by_role("button", name="Korrekturen buchen und abschließen").click()
+    expect(page.get_by_text(re.compile("Inventur abgeschlossen – 1 Korrektur"))).to_be_visible()
+    stock_now = api.get(f"{BASE}/api/v1/products/{joghurt['id']}").json()["stock_quantity"]
+    assert stock_now == 7, stock_now
+    milk_now = api.get(f"{BASE}/api/v1/products/{milk['id']}").json()["stock_quantity"]
+    assert milk_now == 1300, milk_now
+    page.goto(f"{BASE}/inventur")
+    expect(page.get_by_text("Abgeschlossen")).to_be_visible()
+    page.screenshot(path=f"{OUT}/11-inventur-protokoll.png", full_page=True)
+    step("Inventur abgeschlossen: Korrektur gebucht, Protokoll vorhanden")
 
     browser.close()
 

@@ -5,7 +5,7 @@ Android-Gerät (Pixel 7) und prüft Einlagern, Entnehmen (FEFO), Entsorgen, Umla
 Historie mit Storno, Restmenge per Waage, den **Barcode-Scan mit der Kamera** (Chromium
 spielt dafür ein erzeugtes Video mit einem EAN-13-Barcode ab, `make_barcode_video.py`)
 Warnungen zu Bestand und Haltbarkeit, die Haltbarkeitsübersicht, die Einkaufsliste
-mit Einlagerung sowie den Schutz vor Doppelbuchungen (Spez. 15.4, 15.5).
+mit Einlagerung, eine Inventur mit zwischenzeitlicher Buchung sowie den Schutz vor Doppelbuchungen (Spez. 15.4, 15.5).
 
 Er ersetzt nicht den Test auf einem realen Gerät (Kamera, Bedienung mit einer Hand),
 findet aber Fehler, die Typecheck und API-Tests nicht sehen.

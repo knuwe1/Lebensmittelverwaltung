@@ -11,6 +11,7 @@ from app.integrations.router import router as product_data_router
 from app.modules.auth.router import router as auth_router
 from app.modules.catalog.router import categories as categories_router
 from app.modules.catalog.router import products as products_router
+from app.modules.inventory.router import router as inventory_router
 from app.modules.locations.router import router as locations_router
 from app.modules.settings.service import router as settings_router
 from app.modules.shopping.router import router as shopping_router
@@ -71,6 +72,7 @@ def create_app() -> FastAPI:
     api.include_router(stock_router)
     api.include_router(settings_router)
     api.include_router(shopping_router)
+    api.include_router(inventory_router)
     api.include_router(product_data_router)
     app.include_router(api)
     return app
