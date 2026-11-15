@@ -46,9 +46,9 @@ im Repository, Idempotenzschlüssel je Benutzer, Bild-Proxy nur zu Open Food Fac
 | 1 | Keine Begrenzung von Login-Fehlversuchen | mittel | **behoben**: ab dem 5. Fehlversuch je Benutzername Wartezeit 30 s, verdoppelt bis 15 min (429) |
 | 3 | Stark komprimierte Bilder mit sehr vielen Pixeln konnten den Speicher füllen | niedrig | **behoben**: Pixelgrenze (40 MP) vor dem Dekodieren, JPEG wird verkleinert dekodiert |
 | 5 | API-Dokumentation ohne Anmeldung abrufbar | niedrig | **behoben**: in der Installation standardmäßig aus (`LMV_API_DOCS`) |
-| 6 | Ports standardmäßig auf allen Schnittstellen | niedrig | **dokumentiert**: `LMV_BIND_ADDRESS` = Tailscale-IP empfohlen; Live-Installation: offen, siehe 5. |
-| 2 | Abmelden macht das Anmeldetoken nicht serverseitig ungültig (Gültigkeit 14 Tage) | niedrig | offen, Entscheidung siehe 5. |
-| 4 | Mitglieder dürfen Produktbilder ersetzen und Varianten anlegen, Löschen nur Admins | niedrig | offen, Entscheidung siehe 5. |
+| 6 | Ports standardmäßig auf allen Schnittstellen | niedrig | **behoben** (DEC-031): `LMV_BIND_ADDRESS` = Tailscale-IP empfohlen und in der Live-Installation gesetzt |
+| 2 | Abmelden macht das Anmeldetoken nicht serverseitig ungültig (Gültigkeit 14 Tage) | niedrig | **behoben** (DEC-031): Abmelden meldet alle Geräte des Benutzers ab; Gültigkeit bleibt 14 Tage |
+| 4 | Mitglieder dürfen Produktbilder ersetzen und Varianten anlegen, Löschen nur Admins | niedrig | **so gewollt** (DEC-031) |
 | 7 | Standard-Signaturschlüssel, wenn das Backend ohne Compose läuft | niedrig | akzeptiert: Compose erzwingt einen eigenen Schlüssel; betrifft nur lokale Entwicklung |
 | 8 | Härtung: Caddy läuft als root mit Zugriff auf den Tailscale-Socket; Sicherungen sind für lokale Benutzer lesbar | niedrig | akzeptiert für 0.2.0: das Home-Verzeichnis ist für andere Benutzer gesperrt; Härtung der Container als spätere Verbesserung |
 
@@ -85,16 +85,14 @@ Muss der Product Owner auf dem eigenen Android-Gerät durchführen:
 - [ ] Schlechter Empfang / kurzer Verbindungsabbruch: verständliche Meldung, keine doppelte Buchung
 - [ ] Unterwegs über Tailscale (mobile Daten statt WLAN)
 
-## 5. Offene Entscheidungen
+## 5. Entscheidungen
 
-1. **Abmelden (Befund 2):** Soll „Abmelden“ das Gerät sicher abmelden? Einfachste Lösung:
-   Abmelden meldet *alle* Geräte dieses Benutzers ab. Alternative: Gültigkeit verkürzen
-   (z. B. 7 statt 14 Tage).
-2. **Rechte der Mitglieder (Befund 4):** Dürfen Mitglieder Produktbilder ersetzen und Varianten
-   anlegen (heute ja), oder nur Administratoren?
-3. **Live-Installation nur über Tailscale erreichbar machen (Befund 6):** `LMV_BIND_ADDRESS`
-   auf die Tailscale-IP setzen. Danach ist die App aus dem WLAN nur noch über Tailscale
-   erreichbar.
+Vom Product Owner am 15.11.2026 entschieden (DEC-031):
+
+1. **Abmelden** meldet alle Geräte des Benutzers ab; Anmeldungen bleiben 14 Tage gültig.
+2. **Mitglieder** dürfen weiterhin Produktbilder ersetzen und Verpackungsvarianten anlegen.
+3. **Nur über Tailscale erreichbar**: `LMV_BIND_ADDRESS` ist in der Live-Installation auf die
+   Tailscale-IP gesetzt; aus dem WLAN ist die App ohne Tailscale nicht mehr erreichbar.
 
 ## 6. Definition of Done (Spez. 15.6)
 
