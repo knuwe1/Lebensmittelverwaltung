@@ -1,0 +1,43 @@
+{
+	admin off
+	# Zertifikat für Verbindungen ohne Servernamen, z. B. Aufruf über die IP-Adresse im WLAN
+	default_sni {$LMV_DEFAULT_SNI:localhost}
+}
+
+# Zertifikatsquelle über LMV_TLS_MODE (siehe docs/BETRIEB.md):
+#   tailscale – Zertifikat vom Tailscale-Dienst des Hosts (empfohlen, DEC-009)
+#   internal  – eigene lokale Zertifizierungsstelle (Heimnetz ohne Tailscale)
+#   acme      – Let's Encrypt für eine öffentliche Domain (LMV_ACME_EMAIL)
+
+{$LMV_SITE_ADDRESS:localhost} {
+	import /etc/caddy/tls/{$LMV_TLS_MODE:internal}.caddy
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "same-origin"
+		Permissions-Policy "camera=(self), microphone=(), geolocation=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+		-Server
+	}
+
+	request_body /api/* {
+		max_size 10MB
+	}
+
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+
+	handle {
+		root * /srv
+		@immutable path /assets/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+		@shell path / /index.html /sw.js /manifest.webmanifest
+		header @shell Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
